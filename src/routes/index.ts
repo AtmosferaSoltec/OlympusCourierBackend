@@ -14,8 +14,6 @@ readdirSync(__dirname).filter((filename) => {
             router.use(`/${cleanName}`, moduloRuta.router)
         });
     }
-
-
 })
 
 export { router };
