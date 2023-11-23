@@ -144,14 +144,14 @@ const setActivoUsuario = async (req: Request, res: Response) => {
         const id = req.params.id;
         const { activo } = req.body;
 
-        if(!activo){
+        if (!activo) {
             return res.json({
-                isSuccess:false,
+                isSuccess: false,
                 mensaje: 'Se requiere del activo'
             })
         }
 
-        const [verificar]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? AND activo = 'S' LIMIT 1`, [id]);
+        const [verificar]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
         if (verificar.length === 0) {
             res.json({
                 isSuccess: false,
@@ -160,7 +160,7 @@ const setActivoUsuario = async (req: Request, res: Response) => {
             return;
         }
 
-        const [updateResult]: any[] = await db.query(`UPDATE ${tbUsuario} SET activo = ? WHERE id = ?`, [activo,id]);
+        const [updateResult]: any[] = await db.query(`UPDATE ${tbUsuario} SET activo = ? WHERE id = ?`, [activo, id]);
 
         if (updateResult.affectedRows === 1) {
             res.json({

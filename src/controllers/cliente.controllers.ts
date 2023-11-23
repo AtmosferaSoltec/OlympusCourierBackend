@@ -118,10 +118,10 @@ const insertCliente = async (req: Request, res: Response) => {
         }
 
         const db = await connect();
-        const [resultDistrito]:any[] = await db.query(`SELECT id FROM ${tbDistrito} WHERE ID = ?`, [distrito_id])
-        if(resultDistrito.length===0){
+        const [resultDistrito]: any[] = await db.query(`SELECT id FROM ${tbDistrito} WHERE ID = ?`, [distrito_id])
+        if (resultDistrito.length === 0) {
             return res.json({
-                isSuccess:false,
+                isSuccess: false,
                 mensaje: `No existe el distrito con el ID: ${distrito_id}`
             });
         }
@@ -179,7 +179,14 @@ const updateCliente = async (req: Request, res: Response) => {
 const setActivoCliente = async (req: Request, res: Response) => {
     const db = await connect();
     const id = req.params.id;
+    const { activo } = req.body;
 
+    if (!activo) {
+        return res.json({
+            isSuccess: false,
+            mensaje: 'Se requiere del activo'
+        })
+    }
     const [rows]: any[] = await db.query(`SELECT * FROM ${tbCliente} WHERE id = ?`, [id]);
 
     if (rows.length === 0) {
@@ -189,7 +196,7 @@ const setActivoCliente = async (req: Request, res: Response) => {
         });
     }
 
-    const [updateResult]: any[] = await db.query(`UPDATE ${tbCliente} SET activo = 'N' WHERE id = ?`, [id]);
+    const [updateResult]: any[] = await db.query(`UPDATE ${tbCliente} SET activo = ? WHERE id = ?`, [activo, id]);
 
     if (updateResult.affectedRows === 1) {
         res.json({
