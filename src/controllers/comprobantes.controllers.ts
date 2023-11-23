@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import axios from "axios";
-import connectToDatabase from '../mysql';
+import connect from '../mysql';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = 'SELECT * FROM comprobantes';
         const destinos = await db.query(query);
         res.json(destinos);
@@ -18,7 +18,7 @@ const listarTodos = async (req: Request, res: Response) => {
 const insertar = async (req: Request, res: Response) => {
     try {
 
-        const db = await connectToDatabase();
+        const db = await connect();
         const { tipoComprobante, tipoDoc, documento, nombre, direc, correo, items, idReparto } = req.body;
         if (!Array.isArray(items)) {
             console.error('El campo "items" no es una lista.');

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import connectToDatabase from '../mysql';
+import connect from '../mysql';
 const tb_usuarios = 'usuarios';
 
 const login = async (req: Request, res: Response) => {
-    const db = await connectToDatabase();
+    const db = await connect();
     const { documento, clave } = req.body;
 
     if (!documento || !clave) {
@@ -39,19 +39,24 @@ const login = async (req: Request, res: Response) => {
 
 const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = `SELECT * FROM ${tb_usuarios}`;
-        const destinos: any = await db.query(query);
-        res.json(destinos);
+        const [destinos]: any = await db.query(query);
+        res.json({
+            isSuccess: true,
+            data: destinos
+        });
     } catch (error) {
-        console.error('Error al recuperar datos de la tabla Usuarios:', error);
-        res.json({ error: 'Ocurrió un error al obtener los datos de la tabla Usuarios' });
+        res.json({
+            isSuccess: true,
+            mensaje: error
+        });
     }
 };
 
 const getUsuario = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const { id } = req.params;
         const query = `SELECT * FROM ${tb_usuarios} WHERE id = ? LIMIT 1`;
         const resultado: any = await db.query(query, [id]);
@@ -61,17 +66,13 @@ const getUsuario = async (req: Request, res: Response) => {
             delete usuario.clave;
             res.json({
                 isSuccess: true,
-                mensaje: '',
                 data: usuario
             });
-        } else if (resultado.length !== undefined && resultado.length === 0) {
+        } else {
             res.json({
                 isSuccess: false,
-                mensaje: 'Usuario no encontrado',
-                data: null
+                mensaje: 'Usuario no encontrado'
             });
-        } else {
-            res.json(resultado);
         }
     } catch (error) {
         res.json({
@@ -84,9 +85,7 @@ const getUsuario = async (req: Request, res: Response) => {
 
 const insertUsuario = async (req: Request, res: Response) => {
     try {
-
-        const db = await connectToDatabase();
-
+        const db = await connect();
         const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol } = req.body;
         const valores = [
             documento,
@@ -115,7 +114,7 @@ const insertUsuario = async (req: Request, res: Response) => {
 
 const updateUsuario = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const destinoId = req.params.id;
         const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol } = req.body;
         const query = 'UPDATE usuarios SET documento = ?, nombres = ?, ape_materno = ?, ape_paterno = ?, telefono = ?, correo = ?, fecha_nacimiento = ?, clave = ?, rol = ? WHERE id = ?';
@@ -133,7 +132,7 @@ const updateUsuario = async (req: Request, res: Response) => {
 };
 
 const deleteUsuario = async (req: Request, res: Response) => {
-    const db = await connectToDatabase();
+    const db = await connect();
     const id = req.params.id;
 
     const rows: any = await db.query('SELECT * FROM usuarios WHERE id = ?', [id]);

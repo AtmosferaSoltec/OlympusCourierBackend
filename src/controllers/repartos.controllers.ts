@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import connectToDatabase from '../mysql';
+import connect from '../mysql';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const queryRepartos = 'SELECT * FROM repartos';
         const repartos: any = await db.query(queryRepartos);
         const repartosConItems = await Promise.all(
@@ -41,7 +41,7 @@ const listarTodos = async (req: Request, res: Response) => {
 const getReparto = async (req: Request, res: Response) => {
     const repartoId = req.params.id;
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const queryReparto = 'SELECT * FROM repartos WHERE id = ? LIMIT 1';
         const reparto: any = await db.query(queryReparto, [repartoId]);
 
@@ -74,7 +74,7 @@ const getReparto = async (req: Request, res: Response) => {
 
 const obtenerItemsPorRepartoId = async (repartoId: number) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const queryItems = 'SELECT * FROM item_reparto WHERE id_reparto = ?';
         const items: any = await db.query(queryItems, [repartoId]);
         return items;
@@ -86,7 +86,7 @@ const obtenerItemsPorRepartoId = async (repartoId: number) => {
 
 const getCliente = async (id: number) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = 'SELECT * FROM clientes WHERE id = ? LIMIT 1';
         const resultado: any = await db.query(query, [id]);
         if (resultado.length === 1) {
@@ -127,7 +127,7 @@ const getCliente = async (id: number) => {
 }
 const getUsuario = async (id: number) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = 'SELECT * FROM usuarios WHERE id = ? LIMIT 1';
         const resultado: any = await db.query(query, [id]);
         if (resultado.length === 1) {
@@ -145,7 +145,7 @@ const getUsuario = async (id: number) => {
 
 const insertar = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
 
         if (!Array.isArray(items) || items.some(item => typeof item !== 'object')) {
@@ -207,7 +207,7 @@ const insertar = async (req: Request, res: Response) => {
 
 const darConformidad = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const { id_reparto, id_usuario, url_foto } = req.body;
         const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
         const query = 'UPDATE repartos SET estado = ?, fecha_entrega = ?, id_repartidor = ?, url_foto = ? WHERE id = ?';
@@ -232,7 +232,7 @@ const darConformidad = async (req: Request, res: Response) => {
 };
 
 const actualizar = async (req: Request, res: Response) => {
-    const db = await connectToDatabase();
+    const db = await connect();
     const id = req.params.id;
     const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
 
@@ -266,7 +266,7 @@ const actualizar = async (req: Request, res: Response) => {
 
 const eliminar = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const id = req.params.id;
         await db.query('DELETE FROM item_reparto WHERE id_reparto = ?', [id]);
         const repartoRows : any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);

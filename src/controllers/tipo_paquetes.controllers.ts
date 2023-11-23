@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import connectToDatabase from '../mysql';
+import connect from '../mysql';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = 'SELECT * FROM tipo_paquete';
         const destinos = await db.query(query);
         res.json(destinos);
@@ -15,7 +15,7 @@ const listarTodos = async (req: Request, res: Response) => {
 
 const insertar = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const { nombre } = req.body;
         const result: any = await db.query('INSERT INTO tipo_paquete (nombre) VALUES (?)', [nombre]);
 
@@ -32,13 +32,13 @@ const insertar = async (req: Request, res: Response) => {
 
 const actualizar = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const destinoId = req.params.id;
         const { nombre } = req.body;
 
         const query = 'UPDATE tipo_paquete SET nombre = ? WHERE id = ?';
 
-        const result : any = await db.query(query, [nombre, destinoId]);
+        const result: any = await db.query(query, [nombre, destinoId]);
 
         if (result.affectedRows === 1) {
             res.json({ mensaje: 'tipo_paquete actualizado correctamente' });
@@ -52,17 +52,17 @@ const actualizar = async (req: Request, res: Response) => {
 };
 
 const eliminar = async (req: Request, res: Response) => {
-    const db = await connectToDatabase();
+    const db = await connect();
     const id = req.params.id;
 
-    const rows :any = await db.query('SELECT * FROM tipo_paquete WHERE id = ?', [id]);
+    const rows: any = await db.query('SELECT * FROM tipo_paquete WHERE id = ?', [id]);
 
     if (rows.length === 0) {
         res.status(404).json({ error: `El registro con ID ${id} no existe` });
         return;
     }
 
-    const result : any = await db.query('DELETE FROM tipo_paquete WHERE id = ?', [id]);
+    const result: any = await db.query('DELETE FROM tipo_paquete WHERE id = ?', [id]);
 
     if (result.affectedRows === 1) {
         res.json({ mensaje: 'tipo_paquete eliminado correctamente' });

@@ -9,10 +9,8 @@ const dbConfig = {
   database: process.env.DB_DATABASE || 'mydatabase',
 };
 
-async function connectToDatabase() {
-  const connection = await mysql.createConnection(dbConfig);
-  console.log('Conectado a la base de datos MySQL');
-  return connection;
+async function connect() {
+  return await mysql.createConnection(dbConfig);
 }
 
-export default connectToDatabase;
+export default connect;

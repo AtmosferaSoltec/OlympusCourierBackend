@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import connectToDatabase from '../mysql';
+import connect from '../mysql';
 
 const getAllClientes = async (req: Request, res: Response) => {
     try {
-        const connection = await connectToDatabase();
+        const connection = await connect();
         const query = 'SELECT * FROM clientes';
         const [destinos] = await connection.query(query);
         res.json(destinos);
@@ -15,7 +15,7 @@ const getAllClientes = async (req: Request, res: Response) => {
 
 const getCliente = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = 'SELECT * FROM clientes WHERE id = ? LIMIT 1';
         const resultado: any = await db.query(query, [req.params.id]);
 
@@ -34,7 +34,7 @@ const getCliente = async (req: Request, res: Response) => {
 
 const searchCliente = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const datos = req.params.datos;
         const query = 'SELECT * FROM clientes WHERE documento LIKE ? OR nombres LIKE ? OR telefono LIKE ?';
         const rows = await db.query(query, [`%${datos}%`, `%${datos}%`, `%${datos}%`]);
@@ -47,7 +47,7 @@ const searchCliente = async (req: Request, res: Response) => {
 
 const insertCliente = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const { tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia, url_maps } = req.body;
         const result: any = await db.query('INSERT INTO clientes (tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia, url_maps) VALUES (?,?,?,?,?,?,?,?,?,?)', [tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia, url_maps]);
 
@@ -64,7 +64,7 @@ const insertCliente = async (req: Request, res: Response) => {
 
 const updateCliente = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const destinoId = req.params.id;
         const { tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia } = req.body;
 
@@ -84,7 +84,7 @@ const updateCliente = async (req: Request, res: Response) => {
 };
 
 const deleteCliente = async (req: Request, res: Response) => {
-    const db = await connectToDatabase();
+    const db = await connect();
     const id = req.params.id;
 
     const rows: any = await db.query('SELECT * FROM clientes WHERE id = ?', [id]);

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import connectToDatabase from '../mysql';
+import connect from '../mysql';
 
 const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const query = 'SELECT * FROM distrito';
         const destinos = await db.query(query);
         res.json(destinos);
@@ -15,7 +15,7 @@ const getAllDistritos = async (req: Request, res: Response) => {
 
 const insertDistrito = async (req: Request, res: Response) => {
     try {
-        const db = await connectToDatabase();
+        const db = await connect();
         const { nombre } = req.body;
         const result: any = await db.query('INSERT INTO distrito (nombre) VALUES (?)', [nombre]);
 
@@ -32,7 +32,7 @@ const insertDistrito = async (req: Request, res: Response) => {
 
 const updateDistrito = async (req: Request, res: Response) => {
     try {
-        const db: any = await connectToDatabase();
+        const db: any = await connect();
         const destinoId = req.params.id;
         const { nombre } = req.body;
 
@@ -51,7 +51,7 @@ const updateDistrito = async (req: Request, res: Response) => {
 };
 
 const deleteDistrito = async (req: Request, res: Response) => {
-    const db = await connectToDatabase();
+    const db = await connect();
     const id = req.params.id;
 
     const rows: any = await db.query('SELECT * FROM distrito WHERE id = ?', [id]);
