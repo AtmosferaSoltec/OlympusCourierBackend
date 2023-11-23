@@ -23,8 +23,11 @@ const getAllRepartos = async (req: Request, res: Response) => {
                     usuario: await getUsuarioById(reparto.id_usuario),
                     id_repartidor: reparto.id_repartidor,
                     repartidor: await getUsuarioById(reparto.id_repartidor),
-                    items: await getItemsRepartoByRepartoId(reparto.id),
-                    total: parseFloat(reparto.total)
+                    id_comprobante: await getUsuarioById(reparto.id_repartidor),
+                    comprobante: null,
+                    total: parseFloat(reparto.total),
+                    activo: reparto.activo,
+                    items: await getItemsRepartoByRepartoId(reparto.id)
                 };
             })
         );
@@ -64,8 +67,12 @@ const getReparto = async (req: Request, res: Response) => {
             id_usuario: reparto[0].id_usuario,
             usuario: await getUsuarioById(reparto[0].id_usuario),
             id_repartidor: reparto[0].id_repartidor,
-            items: await getItemsRepartoByRepartoId(reparto[0].id),
-            total: parseFloat(reparto[0].total)
+            repartidor: await getUsuarioById(reparto[0].id_repartidor),
+            id_comprobante: await getUsuarioById(reparto[0].id_repartidor),
+            comprobante: null,
+            total: parseFloat(reparto[0].total),
+            activo: reparto[0].activo,
+            items: await getItemsRepartoByRepartoId(reparto[0].id)
         };
         res.json({
             isSuccess: true,

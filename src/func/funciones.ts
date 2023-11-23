@@ -1,5 +1,5 @@
 import connect from '../mysql';
-import { tbDistrito, tbItemReparto } from './tablas';
+import { tbCliente, tbDistrito, tbItemReparto, tbTipoDoc } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
@@ -15,18 +15,34 @@ export const getDistritoById = async (id: number) => {
     }
 };
 
+export const getTipoDocByCod = async (cod: number) => {
+    try {
+        const db = await connect();
+        const [call]: any[] = await db.query(`SELECT * FROM ${tbTipoDoc} WHERE cod = ? LIMIT 1`, [cod]);
+        if (call.length === 0) {
+            return null;
+        } else {
+            delete call[0].id;
+            delete call[0].cod;
+            return call[0];
+        }
+    } catch(err) {
+        console.log(err);
+        return null;
+    }
+};
+
 export const getClienteById = async (id: number) => {
     try {
         const db = await connect();
-        const query = 'SELECT * FROM clientes WHERE id = ? LIMIT 1';
+        const query = `SELECT * FROM ${tbCliente} WHERE id = ? LIMIT 1`;
         const [resultado]: any[] = await db.query(query, [id]);
         if (resultado.length === 0) {
             return null;
-
         } else {
-
             return {
-                tipo_doc: resultado[0].tipo_doc,
+                cod_tipodoc: resultado[0].cod_tipodoc,
+                tipodoc: await getTipoDocByCod(resultado[0].cod_tipodoc),
                 documento: resultado[0].documento,
                 nombres: resultado[0].nombres,
                 telefono: resultado[0].telefono,
@@ -37,6 +53,7 @@ export const getClienteById = async (id: number) => {
                 direc: resultado[0].direc,
                 referencia: resultado[0].referencia,
                 url_maps: resultado[0].url_maps,
+                activo: resultado[0].activo
             }
         }
     } catch (error) {
