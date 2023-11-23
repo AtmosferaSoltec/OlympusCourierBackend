@@ -1,20 +1,15 @@
-import { getClienteById, getUsuarioById } from '../func/funciones';
+import { getClienteById, getItemsRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
 import connect from '../mysql';
-import { tbReparto } from '../func/tablas';
+import { tbItemReparto, tbReparto } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
         const db = await connect();
-        const queryRepartos = 'SELECT * FROM repartos';
+        const queryRepartos = `SELECT * FROM ${tbReparto}`;
         const [repartos]: any[] = await db.query(queryRepartos);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
-                const queryItems = 'SELECT * FROM item_reparto WHERE id_reparto = ?';
-                const [items]: any[] = await db.query(queryItems, [reparto.id]);
-                const cliente = await getClienteById(reparto.id_cliente);
-                const usuario = await getUsuarioById(reparto.id_usuario);
-                const repartidor = await getUsuarioById(reparto.id_repartidor);
                 return {
                     id: reparto.id,
                     anotacion: reparto.anotacion,
@@ -23,12 +18,12 @@ const getAllRepartos = async (req: Request, res: Response) => {
                     fecha_creacion: reparto.fecha_creacion,
                     fecha_entrega: reparto.fecha_entrega,
                     id_cliente: reparto.id_cliente,
-                    cliente,
+                    cliente: await getClienteById(reparto.id_cliente),
                     id_usuario: reparto.id_usuario,
-                    usuario,
+                    usuario: await getUsuarioById(reparto.id_usuario),
                     id_repartidor: reparto.id_repartidor,
-                    repartidor,
-                    items,
+                    repartidor: await getUsuarioById(reparto.id_repartidor),
+                    items: await getItemsRepartoByRepartoId(reparto.id),
                     total: parseFloat(reparto.total)
                 };
             })
@@ -69,7 +64,7 @@ const getReparto = async (req: Request, res: Response) => {
             id_usuario: reparto[0].id_usuario,
             usuario: await getUsuarioById(reparto[0].id_usuario),
             id_repartidor: reparto[0].id_repartidor,
-            items: await obtenerItemsPorRepartoId(reparto[0].id),
+            items: await getItemsRepartoByRepartoId(reparto[0].id),
             total: parseFloat(reparto[0].total)
         };
         res.json({
@@ -79,7 +74,7 @@ const getReparto = async (req: Request, res: Response) => {
     } catch (err) {
         res.json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err || 'Error desconocido'
         });
     }
 };
@@ -104,78 +99,88 @@ const insertReparto = async (req: Request, res: Response) => {
         }
 
         const total = items.reduce((acumulador, item) => {
-            if (typeof item.precio === 'number') {
-                return acumulador + item.precio;
-            } else {
+            if (typeof item.precio !== 'number') {
                 throw new Error('Cada objeto en "items" debe tener una propiedad "precio" numérica.');
             }
+            return acumulador + item.precio;
         }, 0);
 
-        const query = 'INSERT INTO repartos (anotacion, clave, id_cliente, id_usuario, total) VALUES (?,?,?,?,?)'
-        const result: any = await db.query(query, [anotacion, clave, id_cliente, id_usuario, total]);
 
-        if (result.affectedRows === 1) {
-            for (const item of items) {
-                const { num_guia, detalle, cant, precio, id_tipo_paquete } = item
-                const query2 = 'INSERT INTO item_reparto (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)'
-                const result2: any = await db.query(query2, [num_guia, detalle, cant, precio, result.insertId, id_tipo_paquete]);
+        const repartoQuery = `INSERT INTO ${tbReparto} (anotacion, clave, id_cliente, id_usuario, total) VALUES (?,?,?,?,?)`;
+        const [repartoResult]: any[] = await db.query(repartoQuery, [anotacion, clave, id_cliente, id_usuario, total]);
 
-                if (result2.affectedRows !== 1) {
-                    return res.json({
-                        isSuccess: false,
-                        mensaje: 'No se pudo insertar'
-                    });
-                }
-            }
-            res.json({
-                isSuccess: true,
-                mensaje: 'Reparto insertado correctamente'
-            });
-        } else {
-            res.json({
+        if (repartoResult.affectedRows !== 1) {
+            return res.json({
                 isSuccess: false,
                 mensaje: 'No se pudo insertar'
             });
         }
+
+        for (const item of items) {
+            const { num_guia, detalle, cant, precio, id_tipo_paquete } = item;
+            const itemQuery = `INSERT INTO ${tbItemReparto} (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)`;
+            const [itemResult]: any[] = await db.query(itemQuery, [num_guia, detalle, cant, precio, repartoResult.insertId, id_tipo_paquete]);
+
+            if (itemResult.affectedRows === 0) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: 'No se pudo insertar'
+                });
+            }
+        }
+
+        res.json({
+            isSuccess: true,
+            mensaje: 'Insertado correctamente'
+        });
     } catch (err) {
         res.json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err || 'Error desconocido'
         });
     }
 };
 
 const updateReparto = async (req: Request, res: Response) => {
-    const db = await connect();
-    const id = req.params.id;
-    const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
-
     try {
-        const repartoRows: any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);
+        const db = await connect();
+        const id = req.params.id;
+        const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
+
+        // Verificar si el reparto existe
+        const [repartoRows]: any[] = await db.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
+
         if (repartoRows.length === 0) {
             return res.status(404).json({ error: `El reparto con ID ${id} no existe` });
         }
-        const actualizarRepartoQuery = 'UPDATE repartos SET anotacion = ?, clave = ?, id_cliente = ?, id_usuario = ? WHERE id = ?';
-        const repartoResult: any = await db.query(actualizarRepartoQuery, [anotacion, clave, id_cliente, id_usuario, id]);
 
+        // Actualizar la información del reparto
+        const actualizarRepartoQuery = `UPDATE ${tbReparto} SET anotacion = ?, clave = ?, id_cliente = ?, id_usuario = ? WHERE id = ?`;
+        const [repartoResult]: any[] = await db.query(actualizarRepartoQuery, [anotacion, clave, id_cliente, id_usuario, id]);
+
+        // Actualizar los items del reparto si se proporcionan
         if (items && items.length > 0) {
-            await db.query('DELETE FROM item_reparto WHERE id_reparto = ?', [id]);
+            // Eliminar los items existentes
+            await db.query(`DELETE FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
+
+            // Insertar los nuevos items
+            const insertarItemQuery = `INSERT INTO ${tbItemReparto} (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)`;
             for (const item of items) {
                 const { num_guia, detalle, cant, precio, id_tipo_paquete } = item;
-                const insertarItemQuery = 'INSERT INTO item_reparto (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)';
                 await db.query(insertarItemQuery, [num_guia, detalle, cant, precio, id, id_tipo_paquete]);
             }
         }
 
+        // Verificar si la actualización fue exitosa
         if (repartoResult.affectedRows === 1) {
             res.json({ mensaje: 'Reparto actualizado correctamente' });
         } else {
             res.status(500).json({ error: 'No se pudo actualizar el reparto' });
         }
     } catch (err) {
-        res.json({
+        res.status(500).json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err || 'Error desconocido'
         });
     }
 };
@@ -184,36 +189,46 @@ const deleteReparto = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const id = req.params.id;
-        await db.query('DELETE FROM item_reparto WHERE id_reparto = ?', [id]);
-        const repartoRows: any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);
 
-        if (repartoRows.length === 0) {
-            return res.status(404).json({ error: `El reparto con ID ${id} no existe` });
+        if (isNaN(Number(id))) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El ID proporcionado no es numérico'
+            });
         }
 
-        const repartoResult: any = await db.query('DELETE FROM repartos WHERE id = ?', [id]);
+        // Verificar la existencia del reparto
+        const [repartoRows]: any[] = await db.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
+        if (repartoRows.length === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El ID: ${id} no existe`
+            });
+        }
 
+        // Eliminar los items relacionados al reparto
+        await db.query(`DELETE FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
+
+        // Eliminar el reparto
+        const [repartoResult]: any[] = await db.query(`DELETE FROM ${tbReparto} WHERE id = ?`, [id]);
+
+        // Verificar si la eliminación fue exitosa
         if (repartoResult.affectedRows === 1) {
-            res.json({ mensaje: 'Reparto y elementos relacionados eliminados correctamente' });
+            res.json({
+                isSuccess: true,
+                mensaje: 'Reparto eliminado correctamente'
+            });
         } else {
-            res.status(500).json({ error: 'No se pudo eliminar el reparto y sus elementos relacionados' });
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo eliminar el reparto y sus elementos relacionados'
+            });
         }
     } catch (err) {
-        res.json({
+        res.status(500).json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err || 'Error desconocido'
         });
-    }
-};
-
-const obtenerItemsPorRepartoId = async (repartoId: number) => {
-    try {
-        const db = await connect();
-        const queryItems = 'SELECT * FROM item_reparto WHERE id_reparto = ?';
-        const [items]: any[] = await db.query(queryItems, [repartoId]);
-        return items;
-    } catch (error) {
-        throw new Error('Ocurrió un error al obtener los datos de los items por ID de reparto');
     }
 };
 
@@ -221,16 +236,20 @@ const darConformidad = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const { id_reparto, id_usuario, url_foto } = req.body;
+
+        // Obtener la fecha actual en formato YYYY-MM-DD HH:mm:ss
         const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const query = 'UPDATE repartos SET estado = ?, fecha_entrega = ?, id_repartidor = ?, url_foto = ? WHERE id = ?';
-        const result: any = await db.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
+
+        const query = `UPDATE ${tbReparto} SET estado = ?, fecha_entrega = ?, id_repartidor = ?, url_foto = ? WHERE id = ?`;
+        const [result]: any[] = await db.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
+
         if (result.affectedRows > 0) {
             res.json({
                 isSuccess: true,
                 mensaje: 'Conformidad registrada con éxito'
             });
         } else {
-            res.json({
+            res.status(404).json({
                 isSuccess: false,
                 mensaje: 'No se encontró el reparto con el ID proporcionado'
             });
@@ -238,7 +257,7 @@ const darConformidad = async (req: Request, res: Response) => {
     } catch (err) {
         res.json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err || 'Error desconocido'
         });
     }
 };
