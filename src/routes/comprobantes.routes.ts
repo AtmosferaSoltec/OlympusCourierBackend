@@ -1,12 +1,12 @@
-import express from 'express';
+import { Router } from 'express';
 import comprobantesControllers from '../controllers/comprobantes.controllers';
 
-const comprobantesRoutes = express.Router();
+const router = Router();
 
-comprobantesRoutes.get('/comprobantes', comprobantesControllers.listarTodos);
-comprobantesRoutes.post('/comprobantes', comprobantesControllers.insertar);
-comprobantesRoutes.put('/comprobantes/:id', comprobantesControllers.actualizar);
-comprobantesRoutes.delete('/comprobantes/:id', comprobantesControllers.eliminar);
+router.get('/', comprobantesControllers.listarTodos);
+router.post('/', comprobantesControllers.insertar);
+router.put('/:id', comprobantesControllers.actualizar);
+router.delete('/:id', comprobantesControllers.eliminar);
 
 
-export { comprobantesRoutes };
+export { router };

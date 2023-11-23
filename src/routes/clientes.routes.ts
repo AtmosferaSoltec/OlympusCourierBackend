@@ -1,24 +1,23 @@
 import { Request, Response } from "express";
-
-import express from 'express';
+import { Router } from 'express';
 import clienteControllers from '../controllers/cliente.controllers';
 
 
 import ExcelJS from 'exceljs';
 import fs from 'fs/promises';
 
-const clienteRoutes = express.Router();
+const router = Router();
 
-clienteRoutes.get('/clientes', clienteControllers.getAllClientes);
+router.get('/', clienteControllers.getAllClientes);
 
-clienteRoutes.get('/clientes/get/:id', clienteControllers.getCliente);
+router.get('/get/:id', clienteControllers.getCliente);
 
-clienteRoutes.get('/clientes/search/:datos', clienteControllers.searchCliente)
+router.get('/search/:datos', clienteControllers.searchCliente)
 
-clienteRoutes.post('/clientes', clienteControllers.insertCliente);
+router.post('/', clienteControllers.insertCliente);
 
 
-clienteRoutes.post('/clientes/exportarCliente', async (req: Request, res: Response) => {
+router.post('/exportarCliente', async (req: Request, res: Response) => {
     try {
 
         const listClientes = req.body.listClientes;
@@ -58,8 +57,8 @@ clienteRoutes.post('/clientes/exportarCliente', async (req: Request, res: Respon
     }
 });
 
-clienteRoutes.put('/clientes/:id', clienteControllers.updateCliente);
+router.put('/:id', clienteControllers.updateCliente);
 
-clienteRoutes.delete('/clientes/:id', clienteControllers.deleteCliente);
+router.delete('/:id', clienteControllers.deleteCliente);
 
-export { clienteRoutes };
+export { router };

@@ -1,14 +1,13 @@
-import express from 'express';
+import { Router } from 'express';
 import repartosControllers from '../controllers/repartos.controllers';
 
-const repartoRoutes = express.Router();
+const router = Router();
 
-repartoRoutes.get('/repartos', repartosControllers.listarTodos);
-repartoRoutes.get('/repartos/get/:id', repartosControllers.getReparto);
-repartoRoutes.post('/repartos', repartosControllers.insertar);
-repartoRoutes.put('/repartos/:id', repartosControllers.actualizar);
-repartoRoutes.delete('/repartos/:id', repartosControllers.eliminar);
+router.get('/', repartosControllers.listarTodos);
+router.get('/get/:id', repartosControllers.getReparto);
+router.post('/', repartosControllers.insertar);
+router.put('/:id', repartosControllers.actualizar);
+router.delete('/:id', repartosControllers.eliminar);
+router.post('/darConformidad', repartosControllers.darConformidad)
 
-repartoRoutes.post('/repartos/darConformidad', repartosControllers.darConformidad)
-
-export { repartoRoutes };
+export { router };

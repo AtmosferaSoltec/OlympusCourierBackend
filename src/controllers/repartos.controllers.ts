@@ -1,18 +1,19 @@
 import { Request, Response } from 'express';
 import connect from '../mysql';
+import { getClienteById, getUsuarioById } from '../func/funciones';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const queryRepartos = 'SELECT * FROM repartos';
-        const repartos: any = await db.query(queryRepartos);
+        const [repartos]: any[] = await db.query(queryRepartos);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
                 const queryItems = 'SELECT * FROM item_reparto WHERE id_reparto = ?';
-                const items = await db.query(queryItems, [reparto.id]);
-                const cliente = await getCliente(reparto.id_cliente);
-                const usuario = await getUsuario(reparto.id_usuario);
-                const repartidor = await getUsuario(reparto.id_repartidor);
+                const [items]: any[] = await db.query(queryItems, [reparto.id]);
+                const cliente = await getClienteById(reparto.id_cliente);
+                const usuario = await getUsuarioById(reparto.id_usuario);
+                const repartidor = await getUsuarioById(reparto.id_repartidor);
                 return {
                     id: reparto.id,
                     anotacion: reparto.anotacion,
@@ -58,9 +59,9 @@ const getReparto = async (req: Request, res: Response) => {
             fecha_creacion: reparto[0].fecha_creacion,
             fecha_entrega: reparto[0].fecha_entrega,
             id_cliente: reparto[0].id_cliente,
-            cliente: await getCliente(reparto[0].id_cliente),
+            cliente: await getClienteById(reparto[0].id_cliente),
             id_usuario: reparto[0].id_usuario,
-            usuario: await getUsuario(reparto[0].id_usuario),
+            usuario: await getUsuarioById(reparto[0].id_usuario),
             id_repartidor: reparto[0].id_repartidor,
             items: await obtenerItemsPorRepartoId(reparto[0].id),
             total: parseFloat(reparto[0].total)
@@ -83,65 +84,6 @@ const obtenerItemsPorRepartoId = async (repartoId: number) => {
         throw new Error('Ocurrió un error al obtener los datos de los items por ID de reparto');
     }
 };
-
-const getCliente = async (id: number) => {
-    try {
-        const db = await connect();
-        const query = 'SELECT * FROM clientes WHERE id = ? LIMIT 1';
-        const resultado: any = await db.query(query, [id]);
-        if (resultado.length === 1) {
-            const [distrito]: any = await db.query('SELECT nombre FROM destinos WHERE id = ? LIMIT 1', [1]);
-            const {
-                tipo_doc,
-                documento,
-                nombres,
-                telefono,
-                correo,
-                genero,
-                distrito_id,
-                direc,
-                referencia,
-                url_maps
-            } = resultado[0];
-            return {
-                tipo_doc,
-                documento,
-                nombres,
-                telefono,
-                correo,
-                genero,
-                distrito_id,
-                distrito: distrito.nombre,
-                direc,
-                referencia,
-                url_maps
-            }
-        } else if (resultado.length === 0) {
-            return null;
-        } else {
-            return null;
-        }
-    } catch (error) {
-        return null;
-    }
-}
-const getUsuario = async (id: number) => {
-    try {
-        const db = await connect();
-        const query = 'SELECT * FROM usuarios WHERE id = ? LIMIT 1';
-        const resultado: any = await db.query(query, [id]);
-        if (resultado.length === 1) {
-            const { documento, nombres, ape_materno, ape_paterno, telefono, correo, rol } = resultado[0];
-            return { documento, nombres, ape_materno, ape_paterno, telefono, correo, rol };
-        } else if (resultado.length === 0) {
-            return null;
-        } else {
-            return null;
-        }
-    } catch (error) {
-        return null;
-    }
-}
 
 const insertar = async (req: Request, res: Response) => {
     try {
@@ -211,7 +153,7 @@ const darConformidad = async (req: Request, res: Response) => {
         const { id_reparto, id_usuario, url_foto } = req.body;
         const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
         const query = 'UPDATE repartos SET estado = ?, fecha_entrega = ?, id_repartidor = ?, url_foto = ? WHERE id = ?';
-        const result : any = await db.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
+        const result: any = await db.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
         if (result.affectedRows > 0) {
             res.json({
                 isSuccess: true,
@@ -237,12 +179,12 @@ const actualizar = async (req: Request, res: Response) => {
     const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
 
     try {
-        const repartoRows : any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);
+        const repartoRows: any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);
         if (repartoRows.length === 0) {
             return res.status(404).json({ error: `El reparto con ID ${id} no existe` });
         }
         const actualizarRepartoQuery = 'UPDATE repartos SET anotacion = ?, clave = ?, id_cliente = ?, id_usuario = ? WHERE id = ?';
-        const repartoResult : any = await db.query(actualizarRepartoQuery, [anotacion, clave, id_cliente, id_usuario, id]);
+        const repartoResult: any = await db.query(actualizarRepartoQuery, [anotacion, clave, id_cliente, id_usuario, id]);
 
         if (items && items.length > 0) {
             await db.query('DELETE FROM item_reparto WHERE id_reparto = ?', [id]);
@@ -269,13 +211,13 @@ const eliminar = async (req: Request, res: Response) => {
         const db = await connect();
         const id = req.params.id;
         await db.query('DELETE FROM item_reparto WHERE id_reparto = ?', [id]);
-        const repartoRows : any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);
+        const repartoRows: any = await db.query('SELECT * FROM repartos WHERE id = ?', [id]);
 
         if (repartoRows.length === 0) {
             return res.status(404).json({ error: `El reparto con ID ${id} no existe` });
         }
 
-        const repartoResult : any = await db.query('DELETE FROM repartos WHERE id = ?', [id]);
+        const repartoResult: any = await db.query('DELETE FROM repartos WHERE id = ?', [id]);
 
         if (repartoResult.affectedRows === 1) {
             res.json({ mensaje: 'Reparto y elementos relacionados eliminados correctamente' });

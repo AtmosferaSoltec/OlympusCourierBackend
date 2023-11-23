@@ -1,34 +1,80 @@
 import { Request, Response } from 'express';
 import connect from '../mysql';
+import { getDistritoById } from '../func/funciones';
+import { tbCliente } from '../func/tablas';
 
 const getAllClientes = async (req: Request, res: Response) => {
     try {
-        const connection = await connect();
-        const query = 'SELECT * FROM clientes';
-        const [destinos] = await connection.query(query);
-        res.json(destinos);
+        const db = await connect();
+        const query = `SELECT * FROM ${tbCliente}`;
+        const [call]: any[] = await db.query(query);
+
+        const calMap = await Promise.all(
+            call.map(async (cliente: any) => ({
+                id: cliente.id,
+                tipo_doc: cliente.tipo_doc,
+                documento: cliente.documento,
+                nombres: cliente.nombres,
+                telefono: cliente.telefono,
+                correo: cliente.correo,
+                genero: cliente.genero,
+                distrito_id: cliente.distrito_id,
+                distrito: await getDistritoById(cliente.distrito_id),
+                direc: cliente.direc,
+                referencia: cliente.referencia,
+                url_maps: cliente.url_maps
+            }))
+        );
+
+        res.json({
+            isSuccess: true,
+            data: calMap
+        });
     } catch (error) {
-        console.error('Error al recuperar datos de la tabla Clientes:', error);
-        res.status(500).json({ error: 'Ocurrió un error al obtener los datos de la tabla Clientes' });
+        res.json({
+            isSuccess: false,
+            mensaje: error,
+        });
     }
 };
 
 const getCliente = async (req: Request, res: Response) => {
     try {
+        const id = req.params.id;
         const db = await connect();
-        const query = 'SELECT * FROM clientes WHERE id = ? LIMIT 1';
-        const resultado: any = await db.query(query, [req.params.id]);
-
-        if (resultado.length === 1) {
-            res.json(resultado[0]);
-        } else if (resultado.length === 0) {
-            res.status(404).json({ error: 'Cliente no encontrado' });
-        } else {
-            res.status(500).json({ error: 'Error inesperado al obtener el cliente' });
+        const query = `SELECT * FROM ${tbCliente} WHERE id = ? LIMIT 1`;
+        const [call]: any[] = await db.query(query, [id]);
+        if (call.length === 0) {
+            return res.status(404).json({
+                isSuccess: false,
+                mensaje: `No se encontró el ID: ${id}`
+            });
         }
+
+        const calMap = {
+            id: call[0].id,
+            tipo_doc: call[0].tipo_doc,
+            documento: call[0].documento,
+            nombres: call[0].nombres,
+            telefono: call[0].telefono,
+            correo: call[0].correo,
+            genero: call[0].genero,
+            distrito_id: call[0].distrito_id,
+            distrito: await getDistritoById(call[0].distrito_id),
+            direc: call[0].direc,
+            referencia: call[0].referencia,
+            url_maps: call[0].url_maps
+        };
+
+        res.json({
+            isSuccess: true,
+            data: calMap
+        });
     } catch (error) {
-        console.error('Error al recuperar datos de la tabla Clientes:', error);
-        res.status(500).json({ error: 'Ocurrió un error al obtener los datos de la tabla Clientes' });
+        res.json({
+            isSuccess: false,
+            mensaje: error,
+        });
     }
 }
 

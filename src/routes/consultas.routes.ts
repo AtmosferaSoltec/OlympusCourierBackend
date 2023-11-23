@@ -1,9 +1,9 @@
-import express from 'express';
+import { Router } from 'express';
 import consultasController from '../controllers/consultas.controller';
 
-const consultasRoutes = express.Router();
+const router = Router();
 
-consultasRoutes.post('/consultas', consultasController.consultarDoc);
+router.post('/', consultasController.consultarDoc);
 
 
-export { consultasRoutes };
+export { router };

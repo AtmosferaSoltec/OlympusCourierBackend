@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
 import connect from '../mysql';
-import { tbDistrito } from '../func/tablas';
 
-const getAllDistritos = async (req: Request, res: Response) => {
+const tabla = 'tipo_paquete';
+
+const getAllPaquetes = async (req: Request, res: Response) => {
     try {
         const db = await connect();
-        const query = `SELECT * FROM ${tbDistrito}`;
-        const [call] = await db.query(query);
+        const query = `SELECT * FROM ${tabla}`;
+        const [call]: any[] = await db.query(query);
         res.json({
             isSuccess: true,
             data: call
@@ -19,11 +20,11 @@ const getAllDistritos = async (req: Request, res: Response) => {
     }
 };
 
-const getDistrito = async (req: Request, res: Response) => {
+const getPaquete = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
         const db = await connect();
-        const query = `SELECT * FROM ${tbDistrito} WHERE id = ? LIMIT 1`;
+        const query = `SELECT * FROM ${tabla} WHERE id = ? LIMIT 1`;
         const [call]: any[] = await db.query(query, [id]);
         if (call.length === 0) {
             return res.status(404).json({
@@ -44,7 +45,7 @@ const getDistrito = async (req: Request, res: Response) => {
     }
 };
 
-const insertDistrito = async (req: Request, res: Response) => {
+const insertPaquete = async (req: Request, res: Response) => {
     try {
         const { nombre } = req.body;
         if (!nombre) {
@@ -53,36 +54,37 @@ const insertDistrito = async (req: Request, res: Response) => {
                 mensaje: 'El campo "nombre" es requerido.'
             });
         }
+
         const db = await connect();
 
-        const [result]: any[] = await db.query(`INSERT INTO ${tbDistrito} (nombre) VALUES (?)`, [nombre]);
+        const [result]: any[] = await db.query(`INSERT INTO ${tabla} (nombre) VALUES (?)`, [nombre]);
 
         if (result.affectedRows === 1) {
+
             res.json({
                 isSuccess: true,
-                mensaje: 'Distrito insertado correctamente',
+                mensaje: 'Tipo Paquete insertado correctamente',
                 data: result.insertId
             });
         } else {
             res.json({
                 isSuccess: false,
-                mensaje: 'No se pudo insertar el distrito'
+                data: 'No se pudo insertar',
             });
         }
     } catch (error) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error,
         });
     }
 };
 
-const updateDistrito = async (req: Request, res: Response) => {
+const updatePaquete = async (req: Request, res: Response) => {
     try {
         const db = await connect();
-        const destinoId = req.params.id;
+        const id = req.params.id;
         const { nombre } = req.body;
-
         if (!nombre) {
             return res.json({
                 isSuccess: false,
@@ -90,18 +92,18 @@ const updateDistrito = async (req: Request, res: Response) => {
             });
         }
 
-        const query = `UPDATE ${tbDistrito} SET nombre = ? WHERE id = ?`;
-        const [result]: any[] = await db.query(query, [nombre, destinoId]);
+        const query = `UPDATE ${tabla} SET nombre = ? WHERE id = ?`;
+        const [result]: any[] = await db.query(query, [nombre, id]);
 
         if (result.affectedRows === 1) {
             res.json({
                 isSuccess: true,
-                mensaje: 'Distrito actualizado correctamente'
+                mensaje: 'TipoPaquete actualizado correctamente'
             });
         } else {
             res.json({
                 isSuccess: false,
-                mensaje: 'No se encontró el distrito para actualizar'
+                mensaje: 'No se encontró el id para actualizar'
             });
         }
     } catch (error) {
@@ -112,11 +114,11 @@ const updateDistrito = async (req: Request, res: Response) => {
     }
 };
 
-const deleteDistrito = async (req: Request, res: Response) => {
+const deletePaquete = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const id = req.params.id;
-        const [rows]: any[] = await db.query(`SELECT * FROM ${tbDistrito} WHERE id = ?`, [id]);
+        const [rows]: any[] = await db.query(`SELECT * FROM ${tabla} WHERE id = ?`, [id]);
 
         if (rows.length === 0) {
             res.json({
@@ -125,16 +127,16 @@ const deleteDistrito = async (req: Request, res: Response) => {
             });
             return;
         }
-        const [result]: any[] = await db.query(`DELETE FROM ${tbDistrito} WHERE id = ?`, [id]);
+        const [result]: any[] = await db.query(`DELETE FROM ${tabla} WHERE id = ?`, [id]);
         if (result.affectedRows === 1) {
             res.json({
                 isSuccess: true,
-                mensaje: 'Distrito eliminado correctamente'
+                mensaje: 'TipoPaquete eliminado correctamente'
             });
         } else {
             res.json({
                 isSuccess: false,
-                mensaje: 'No se pudo eliminar el distrito'
+                mensaje: 'No se pudo eliminar'
             });
         }
     } catch (error) {
@@ -143,6 +145,7 @@ const deleteDistrito = async (req: Request, res: Response) => {
             mensaje: error
         });
     }
-};
+}
 
-export default { getAllDistritos, getDistrito, insertDistrito, updateDistrito, deleteDistrito }
+
+export default { getAllPaquetes, getPaquete, insertPaquete, updatePaquete, deletePaquete }

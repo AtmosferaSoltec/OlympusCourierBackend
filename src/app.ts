@@ -1,30 +1,16 @@
 import express from "express";
 import cors from "cors";
-import dotenv from 'dotenv';
-import { distritoRoutes } from './routes/distrito.routes';
-import { clienteRoutes } from './routes/cliente.routes';
-import { usuarioRoutes } from './routes/usuarios.routes';
-import { tipoPaquetesRoutes } from './routes/tipo_paquetes.routes';
-import { repartoRoutes } from './routes/repartos.routes';
-import { comprobantesRoutes } from './routes/comprobantes.routes';
-import { consultasRoutes } from './routes/consultas.routes';
-
-dotenv.config()
-
-const app = express();
+import "dotenv/config";
+import { router } from './routes';
 
 const puerto = process.env.PORT || 3000;
+const app = express();
+app.use(cors());
 
-app.use(cors())
+
 app.use(express.json())
 
-app.use('/api', distritoRoutes);
-app.use('/api', clienteRoutes);
-app.use('/api', usuarioRoutes);
-app.use('/api', tipoPaquetesRoutes);
-app.use('/api', repartoRoutes);
-app.use('/api', comprobantesRoutes);
-app.use('/api', consultasRoutes);
+app.use('/api', router);
 
 async function startServer() {
     try {

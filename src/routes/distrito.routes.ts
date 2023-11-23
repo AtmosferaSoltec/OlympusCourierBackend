@@ -1,11 +1,12 @@
-import express from 'express';
+import { Router } from 'express';
 import destinoControllers from '../controllers/distrito.controllers';
 
-const distritoRoutes = express.Router();
+const router = Router();
 
-distritoRoutes.get('/distritos', destinoControllers.getAllDistritos);
-distritoRoutes.post('/distritos', destinoControllers.insertDistrito);
-distritoRoutes.put('/distritos/:id', destinoControllers.updateDistrito);
-distritoRoutes.delete('/distritos/:id', destinoControllers.deleteDistrito);
+router.get('/', destinoControllers.getAllDistritos);
+router.get('/:id', destinoControllers.getDistrito);
+router.post('/', destinoControllers.insertDistrito);
+router.put('/:id', destinoControllers.updateDistrito);
+router.delete('/:id', destinoControllers.deleteDistrito);
 
-export { distritoRoutes };
+export { router };
