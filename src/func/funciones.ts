@@ -1,5 +1,5 @@
 import connect from '../mysql';
-import { tbCliente, tbDistrito, tbItemReparto, tbTipoDoc } from './tablas';
+import { tbCliente, tbDistrito, tbItemReparto, tbTipoDoc, tbUsuario } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
@@ -26,7 +26,7 @@ export const getTipoDocByCod = async (cod: number) => {
             delete call[0].cod;
             return call[0];
         }
-    } catch(err) {
+    } catch (err) {
         console.log(err);
         return null;
     }
@@ -64,8 +64,7 @@ export const getClienteById = async (id: number) => {
 export const getUsuarioById = async (id: number) => {
     try {
         const db = await connect();
-        const query = 'SELECT * FROM usuarios WHERE id = ? LIMIT 1';
-        const [resultado]: any[] = await db.query(query, [id]);
+        const [resultado]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
         if (resultado.length === 0) {
             return null;
         } else {
@@ -82,8 +81,7 @@ export const getUsuarioById = async (id: number) => {
 export const getItemsRepartoByRepartoId = async (id: number) => {
     try {
         const db = await connect();
-        const queryItems = `SELECT * FROM ${tbItemReparto} WHERE id_reparto = ?`;
-        const [items]: any[] = await db.query(queryItems, [id]);
+        const [items]: any[] = await db.query(`SELECT * FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
         return items;
     } catch (error) {
         console.log(error);

@@ -6,7 +6,7 @@ const router = Router();
 router.get('/', comprobantesControllers.listarTodos);
 router.post('/', comprobantesControllers.insertar);
 router.put('/:id', comprobantesControllers.actualizar);
-router.delete('/:id', comprobantesControllers.eliminar);
+router.patch('/:id', comprobantesControllers.setActivoComprobante);
 
 
 export { router };

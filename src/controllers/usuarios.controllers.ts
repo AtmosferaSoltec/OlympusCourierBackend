@@ -138,12 +138,20 @@ const updateUsuario = async (req: Request, res: Response) => {
 };
 
 
-const deleteUsuario = async (req: Request, res: Response) => {
+const setActivoUsuario = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const id = req.params.id;
-        const [verificar]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? AND activo = 'S' LIMIT 1`, [id]);
+        const { activo } = req.body;
 
+        if(!activo){
+            return res.json({
+                isSuccess:false,
+                mensaje: 'Se requiere del activo'
+            })
+        }
+
+        const [verificar]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? AND activo = 'S' LIMIT 1`, [id]);
         if (verificar.length === 0) {
             res.json({
                 isSuccess: false,
@@ -152,44 +160,20 @@ const deleteUsuario = async (req: Request, res: Response) => {
             return;
         }
 
-        // Verificar si el usuario está siendo referenciado por alguna tabla
-        const [references]: any[] = await db.query('SELECT table_name, column_name ' +
-            'FROM information_schema.key_column_usage ' +
-            'WHERE referenced_table_name = ? AND referenced_column_name = "id"',
-            [tbUsuario]);
+        const [updateResult]: any[] = await db.query(`UPDATE ${tbUsuario} SET activo = ? WHERE id = ?`, [activo,id]);
 
-        if (references.length > 0) {
-            // El usuario está siendo referenciado por al menos una tabla
-            // Cambiar el activo a "N" en lugar de eliminarlo
-            const [updateResult]: any[] = await db.query(`UPDATE ${tbUsuario} SET activo = 'N' WHERE id = ?`, [id]);
-
-            if (updateResult.affectedRows === 1) {
-                res.json({
-                    isSuccess: true,
-                    mensaje: 'Usuario marcado como inactivo, ya que está siendo referenciado por otras tablas.'
-                });
-            } else {
-                res.json({
-                    isSuccess: false,
-                    mensaje: 'No se pudo marcar al usuario como inactivo.'
-                });
-            }
+        if (updateResult.affectedRows === 1) {
+            res.json({
+                isSuccess: true,
+                mensaje: 'Activo actualizado'
+            });
         } else {
-            // El usuario no está siendo referenciado por ninguna tabla, eliminarlo
-            const [deleteResult]: any[] = await db.query(`DELETE FROM ${tbUsuario} WHERE id = ?`, [id]);
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo actualizar el activo'
+            });
+        };
 
-            if (deleteResult.affectedRows === 1) {
-                res.json({
-                    isSuccess: true,
-                    mensaje: 'Usuario eliminado correctamente'
-                });
-            } else {
-                res.json({
-                    isSuccess: false,
-                    mensaje: 'No se pudo eliminar al usuario.'
-                });
-            }
-        }
     } catch (error) {
         res.json({
             isSuccess: false,
@@ -198,4 +182,4 @@ const deleteUsuario = async (req: Request, res: Response) => {
     }
 }
 
-export default { login, getAllUsuarios, getUsuario, insertUsuario, updateUsuario, deleteUsuario }
+export default { login, getAllUsuarios, getUsuario, insertUsuario, updateUsuario, setActivoUsuario }

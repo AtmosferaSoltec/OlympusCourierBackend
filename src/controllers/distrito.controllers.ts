@@ -112,31 +112,42 @@ const updateDistrito = async (req: Request, res: Response) => {
     }
 };
 
-const deleteDistrito = async (req: Request, res: Response) => {
+const setActivoDistrito = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const id = req.params.id;
-        const [rows]: any[] = await db.query(`SELECT * FROM ${tbDistrito} WHERE id = ?`, [id]);
+        const { activo } = req.body;
 
+        if(!activo){
+            return res.json({
+                isSuccess:false,
+                mensaje: 'Se requiere del activo'
+            })
+        }
+
+        const [rows]: any[] = await db.query(`SELECT * FROM ${tbDistrito} WHERE id = ?`, [id]);
         if (rows.length === 0) {
             res.json({
                 isSuccess: false,
                 mensaje: `El registro con ID ${id} no existe`
             });
             return;
-        }
-        const [result]: any[] = await db.query(`DELETE FROM ${tbDistrito} WHERE id = ?`, [id]);
-        if (result.affectedRows === 1) {
+        };
+
+        const [updateResult]: any[] = await db.query(`UPDATE ${tbDistrito} SET activo = ? WHERE id = ?`, [activo,id]);
+
+        if (updateResult.affectedRows === 1) {
             res.json({
                 isSuccess: true,
-                mensaje: 'Distrito eliminado correctamente'
+                mensaje: 'Activo actualizado'
             });
         } else {
             res.json({
                 isSuccess: false,
-                mensaje: 'No se pudo eliminar el distrito'
+                mensaje: 'No se pudo actualizar el activo'
             });
-        }
+        };
+
     } catch (error) {
         res.json({
             isSuccess: false,
@@ -145,4 +156,4 @@ const deleteDistrito = async (req: Request, res: Response) => {
     }
 };
 
-export default { getAllDistritos, getDistrito, insertDistrito, updateDistrito, deleteDistrito }
+export default { getAllDistritos, getDistrito, insertDistrito, updateDistrito, setActivoDistrito }

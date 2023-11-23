@@ -192,10 +192,18 @@ const updateReparto = async (req: Request, res: Response) => {
     }
 };
 
-const deleteReparto = async (req: Request, res: Response) => {
+const setActivoReparto = async (req: Request, res: Response) => {
     try {
         const db = await connect();
         const id = req.params.id;
+        const { activo } = req.body;
+
+        if(!activo){
+            return res.json({
+                isSuccess:false,
+                mensaje: 'Se requiere del activo'
+            })
+        }
 
         if (isNaN(Number(id))) {
             return res.json({
@@ -214,23 +222,21 @@ const deleteReparto = async (req: Request, res: Response) => {
         }
 
         // Eliminar los items relacionados al reparto
-        await db.query(`DELETE FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
+        await db.query(`UPDATE ${tbItemReparto} SET activo = ? WHERE id_reparto = ?`, [activo, id]);
 
-        // Eliminar el reparto
-        const [repartoResult]: any[] = await db.query(`DELETE FROM ${tbReparto} WHERE id = ?`, [id]);
+        const [updateResult]: any[] = await db.query(`UPDATE ${tbReparto} SET activo = ? WHERE id = ?`, [activo,id]);
 
-        // Verificar si la eliminación fue exitosa
-        if (repartoResult.affectedRows === 1) {
+        if (updateResult.affectedRows === 1) {
             res.json({
                 isSuccess: true,
-                mensaje: 'Reparto eliminado correctamente'
+                mensaje: 'Activo actualizado'
             });
         } else {
             res.json({
                 isSuccess: false,
-                mensaje: 'No se pudo eliminar el reparto y sus elementos relacionados'
+                mensaje: 'No se pudo actualizar el activo'
             });
-        }
+        };
     } catch (err) {
         res.status(500).json({
             isSuccess: false,
@@ -270,4 +276,4 @@ const darConformidad = async (req: Request, res: Response) => {
 };
 
 
-export default { getAllRepartos, getReparto, insertReparto, darConformidad, updateReparto, deleteReparto }
+export default { getAllRepartos, getReparto, insertReparto, darConformidad, updateReparto, setActivoReparto }

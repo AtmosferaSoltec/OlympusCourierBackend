@@ -176,7 +176,7 @@ const updateCliente = async (req: Request, res: Response) => {
     }
 };
 
-const deleteCliente = async (req: Request, res: Response) => {
+const setActivoCliente = async (req: Request, res: Response) => {
     const db = await connect();
     const id = req.params.id;
 
@@ -189,19 +189,19 @@ const deleteCliente = async (req: Request, res: Response) => {
         });
     }
 
-    const [result]: any[] = await db.query(`DELETE FROM ${tbCliente} WHERE id = ?`, [id]);
+    const [updateResult]: any[] = await db.query(`UPDATE ${tbCliente} SET activo = 'N' WHERE id = ?`, [id]);
 
-    if (result.affectedRows === 1) {
+    if (updateResult.affectedRows === 1) {
         res.json({
             isSuccess: true,
-            mensaje: 'Cliente eliminado correctamente'
+            mensaje: 'Distrito marcado como inactivo'
         });
     } else {
         res.json({
             isSuccess: false,
-            mensaje: 'Error al buscar clientes en la base de datos'
+            mensaje: 'No se pudo marcar al distrito como inactivo.'
         });
-    }
+    };
 }
 
-export default { getAllClientes, getCliente, searchCliente, insertCliente, updateCliente, deleteCliente }
+export default { getAllClientes, getCliente, searchCliente, insertCliente, updateCliente, setActivoCliente }

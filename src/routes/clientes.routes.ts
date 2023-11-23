@@ -59,6 +59,6 @@ router.post('/exportarCliente', async (req: Request, res: Response) => {
 
 router.put('/:id', clienteControllers.updateCliente);
 
-router.delete('/:id', clienteControllers.deleteCliente);
+router.patch('/:id', clienteControllers.setActivoCliente);
 
 export { router };

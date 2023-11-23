@@ -8,6 +8,6 @@ router.get('/', usuariosControllers.getAllUsuarios);
 router.get('/get/:id', usuariosControllers.getUsuario);
 router.post('/', usuariosControllers.insertUsuario);
 router.put('/:id', usuariosControllers.updateUsuario);
-router.delete('/:id', usuariosControllers.deleteUsuario);
+router.patch('/:id', usuariosControllers.setActivoUsuario);
 
 export { router };

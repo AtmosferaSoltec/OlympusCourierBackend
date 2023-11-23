@@ -157,6 +157,7 @@ CREATE TABLE item_reparto (
   precio DECIMAL(10, 2) DEFAULT 0.0,
   id_reparto INT NOT NULL,
   id_tipo_paquete INT NOT NULL,
+  activo CHAR(1) DEFAULT 'S',
   FOREIGN KEY (id_reparto) REFERENCES reparto(id),
   FOREIGN KEY (id_tipo_paquete) REFERENCES tipo_paquete(id)
 );

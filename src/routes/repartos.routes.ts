@@ -7,7 +7,7 @@ router.get('/', repartosControllers.getAllRepartos);
 router.get('/:id', repartosControllers.getReparto);
 router.post('/', repartosControllers.insertReparto);
 router.put('/:id', repartosControllers.updateReparto);
-router.delete('/:id', repartosControllers.deleteReparto);
+router.patch('/:id', repartosControllers.setActivoReparto);
 router.post('/darConformidad', repartosControllers.darConformidad)
 
 export { router };

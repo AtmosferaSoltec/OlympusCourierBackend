@@ -7,7 +7,7 @@ router.get('/', tipoPaquetesControllers.getAllPaquetes);
 router.get('/:id', tipoPaquetesControllers.getPaquete);
 router.post('/', tipoPaquetesControllers.insertPaquete);
 router.put('/:id', tipoPaquetesControllers.updatePaquete);
-router.delete('/:id', tipoPaquetesControllers.deletePaquete);
+router.patch('/:id', tipoPaquetesControllers.setActivoPaquete);
 
 
 export { router };

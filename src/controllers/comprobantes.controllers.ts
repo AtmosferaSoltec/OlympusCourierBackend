@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import axios from "axios";
 import connect from '../mysql';
+import { tbComprobante } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
@@ -168,13 +169,45 @@ const getFechaEmision = () => {
 const actualizar = (req: Request, res: Response) => {
 
 };
-const eliminar = (req: Request, res: Response) => {
+const setActivoComprobante = async (req: Request, res: Response) => {
+    const db = await connect();
+    const id = req.params.id;
+    const { activo } = req.body;
 
+    if (!activo) {
+        return res.json({
+            isSuccess: false,
+            mensaje: 'Se requiere del activo'
+        })
+    }
+
+    const [rows]: any[] = await db.query(`SELECT * FROM ${tbComprobante} WHERE id = ?`, [id]);
+
+    if (rows.length === 0) {
+        return res.json({
+            isSuccess: false,
+            mensaje: `El ID: ${id} no existe`
+        });
+    }
+
+    const [updateResult]: any[] = await db.query(`UPDATE ${tbComprobante} SET activo = ? WHERE id = ?`, [activo, id]);
+
+    if (updateResult.affectedRows === 1) {
+        res.json({
+            isSuccess: true,
+            mensaje: 'Activo actualizado'
+        });
+    } else {
+        res.json({
+            isSuccess: false,
+            mensaje: 'No se pudo actualizar el activo'
+        });
+    };
 };
 
 export default {
     listarTodos,
     insertar,
     actualizar,
-    eliminar
+    setActivoComprobante
 }
