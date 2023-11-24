@@ -3,7 +3,8 @@ import consultasController from '../controllers/consultas.controller';
 
 const router = Router();
 
-router.post('/', consultasController.consultarDoc);
+router.get('/dni/:doc', consultasController.consultarDni);
+router.get('/ruc/:doc', consultasController.consultarRuc);
 
 
 export { router };

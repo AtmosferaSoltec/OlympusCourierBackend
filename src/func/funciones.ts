@@ -1,10 +1,9 @@
-import connect from '../mysql';
+import { pool } from '../db';
 import { tbCliente, tbDistrito, tbItemReparto, tbTipoDoc, tbUsuario } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
-        const db = await connect();
-        const [call]: any[] = await db.query(`SELECT nombre FROM ${tbDistrito} WHERE id = ? LIMIT 1`, [id]);
+        const [call]: any[] = await pool.query(`SELECT nombre FROM ${tbDistrito} WHERE id = ? LIMIT 1`, [id]);
         if (call.length === 0) {
             return '';
         } else {
@@ -17,8 +16,7 @@ export const getDistritoById = async (id: number) => {
 
 export const getTipoDocByCod = async (cod: number) => {
     try {
-        const db = await connect();
-        const [call]: any[] = await db.query(`SELECT * FROM ${tbTipoDoc} WHERE cod = ? LIMIT 1`, [cod]);
+        const [call]: any[] = await pool.query(`SELECT * FROM ${tbTipoDoc} WHERE cod = ? LIMIT 1`, [cod]);
         if (call.length === 0) {
             return null;
         } else {
@@ -34,9 +32,8 @@ export const getTipoDocByCod = async (cod: number) => {
 
 export const getClienteById = async (id: number) => {
     try {
-        const db = await connect();
         const query = `SELECT * FROM ${tbCliente} WHERE id = ? LIMIT 1`;
-        const [resultado]: any[] = await db.query(query, [id]);
+        const [resultado]: any[] = await pool.query(query, [id]);
         if (resultado.length === 0) {
             return null;
         } else {
@@ -63,8 +60,7 @@ export const getClienteById = async (id: number) => {
 
 export const getUsuarioById = async (id: number) => {
     try {
-        const db = await connect();
-        const [resultado]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
+        const [resultado]: any[] = await pool.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
         if (resultado.length === 0) {
             return null;
         } else {
@@ -80,8 +76,7 @@ export const getUsuarioById = async (id: number) => {
 
 export const getItemsRepartoByRepartoId = async (id: number) => {
     try {
-        const db = await connect();
-        const [items]: any[] = await db.query(`SELECT * FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
+        const [items]: any[] = await pool.query(`SELECT * FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
         return items;
     } catch (error) {
         console.log(error);

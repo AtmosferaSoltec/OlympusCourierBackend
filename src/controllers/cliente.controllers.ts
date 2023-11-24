@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
-import connect from '../mysql';
 import { getDistritoById } from '../func/funciones';
 import { tbCliente, tbDistrito } from '../func/tablas';
+import { pool } from '../db';
 
 const getAllClientes = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const query = `SELECT * FROM ${tbCliente}`;
-        const [call]: any[] = await db.query(query);
+        const [call]: any[] = await pool.query(query);
 
         const calMap = await Promise.all(
             call.map(async (cliente: any) => ({
@@ -18,8 +17,8 @@ const getAllClientes = async (req: Request, res: Response) => {
                 telefono: cliente.telefono,
                 correo: cliente.correo,
                 genero: cliente.genero,
-                distrito_id: cliente.distrito_id,
-                distrito: await getDistritoById(cliente.distrito_id),
+                id_distrito: cliente.id_distrito,
+                distrito: await getDistritoById(cliente.id_distrito),
                 direc: cliente.direc,
                 referencia: cliente.referencia,
                 url_maps: cliente.url_maps
@@ -30,10 +29,10 @@ const getAllClientes = async (req: Request, res: Response) => {
             isSuccess: true,
             data: calMap
         });
-    } catch (error) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message,
         });
     }
 };
@@ -41,8 +40,7 @@ const getAllClientes = async (req: Request, res: Response) => {
 const getCliente = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
-        const db = await connect();
-        const [call]: any[] = await db.query(`SELECT * FROM ${tbCliente} WHERE id = ? LIMIT 1`, [id]);
+        const [call]: any[] = await pool.query(`SELECT * FROM ${tbCliente} WHERE id = ? LIMIT 1`, [id]);
         if (call.length === 0) {
             return res.json({
                 isSuccess: false,
@@ -79,13 +77,30 @@ const getCliente = async (req: Request, res: Response) => {
 
 const searchCliente = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const datos = req.params.datos;
-        const query = `SELECT * FROM ${tbCliente} WHERE documento LIKE ? OR nombres LIKE ? OR telefono LIKE ?`;
-        const [rows]: any[] = await db.query(query, [`%${datos}%`, `%${datos}%`, `%${datos}%`]);
+        const query = `SELECT * FROM ${tbCliente} WHERE documento LIKE ? OR nombres LIKE ? OR telefono LIKE ? LIMIT 5`;
+        const [rows]: any[] = await pool.query(query, [`%${datos}%`, `%${datos}%`, `%${datos}%`]);
+
+        const calMap = await Promise.all(
+            rows.map(async (cliente: any) => ({
+                id: cliente.id,
+                tipo_doc: cliente.tipo_doc,
+                documento: cliente.documento,
+                nombres: cliente.nombres,
+                telefono: cliente.telefono,
+                correo: cliente.correo,
+                genero: cliente.genero,
+                id_distrito: cliente.id_distrito,
+                distrito: await getDistritoById(cliente.id_distrito),
+                direc: cliente.direc,
+                referencia: cliente.referencia,
+                url_maps: cliente.url_maps
+            }))
+        );
+
         res.json({
             isSuccess: true,
-            data: rows
+            data: calMap
         });
     } catch (error) {
         res.json({
@@ -104,25 +119,23 @@ const insertCliente = async (req: Request, res: Response) => {
             telefono,
             correo,
             genero,
-            distrito_id,
+            id_distrito,
             direc,
             referencia,
             url_maps
         } = req.body;
 
-        if (!tipo_doc || !documento || !nombres || !distrito_id) {
+        if (!tipo_doc || !documento || !nombres || !id_distrito) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Faltan parámetros obligatorios'
             });
         }
-
-        const db = await connect();
-        const [resultDistrito]: any[] = await db.query(`SELECT id FROM ${tbDistrito} WHERE ID = ?`, [distrito_id])
+        const [resultDistrito]: any[] = await pool.query(`SELECT id FROM ${tbDistrito} WHERE ID = ?`, [id_distrito])
         if (resultDistrito.length === 0) {
             return res.json({
                 isSuccess: false,
-                mensaje: `No existe el distrito con el ID: ${distrito_id}`
+                mensaje: `No existe el distrito con el ID: ${id_distrito}`
             });
         }
 
@@ -133,8 +146,8 @@ const insertCliente = async (req: Request, res: Response) => {
         referencia = referencia || '';
         url_maps = url_maps || '';
 
-        const query = `INSERT INTO ${tbCliente} (tipo_doc,documento,nombres,telefono,correo,genero,distrito_id,direc,referencia,url_maps) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        const [result]: any[] = await db.query(query, [tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia, url_maps]);
+        const query = `INSERT INTO ${tbCliente} (cod_tipodoc,documento,nombres,telefono,correo,genero,id_distrito,direc,referencia,url_maps) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const [result]: any[] = await pool.query(query, [tipo_doc, documento, nombres, telefono, correo, genero, id_distrito, direc, referencia, url_maps]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -147,37 +160,47 @@ const insertCliente = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo insertar el cliente'
             });
         }
-    } catch (err) {
+    } catch (err: any) {
         res.json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err.message
         });
     }
 }
 
 const updateCliente = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
-        const destinoId = req.params.id;
-        const { tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia } = req.body;
+        const { id } = req.params;
+        const { cod_tipodoc, documento, nombres, telefono, correo, genero, id_distrito, direc, referencia, url_maps } = req.body;
 
-        const query = 'UPDATE clientes SET tipo_doc = ?, documento = ?, nombres = ?, telefono = ?, correo = ?, genero = ?, distrito_id = ?, direc = ?, referencia = ? WHERE id = ?';
 
-        const result: any = await db.query(query, [tipo_doc, documento, nombres, telefono, correo, genero, distrito_id, direc, referencia, destinoId]);
+        //TODO Validar que el codtipo R sea pára ruc y D Para DNI
+
+        const query = `UPDATE ${tbCliente} SET cod_tipodoc = ?, documento = ?, nombres = ?, telefono = ?, correo = ?, genero = ?, id_distrito = ?, direc = ?, referencia = ?, url_maps = ? WHERE id = ?`;
+
+        const [result]: any[] = await pool.query(query, [cod_tipodoc, documento, nombres, telefono, correo, genero, id_distrito, direc, referencia, url_maps, id]);
+
 
         if (result.affectedRows === 1) {
-            res.json({ mensaje: 'Cliente actualizado correctamente' });
+            res.json({
+                isSuccess: true,
+                mensaje: 'Cliente actualizado correctamente'
+            });
         } else {
-            res.status(500).json({ error: 'No se pudo actualizar' });
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo actualizar'
+            });
         }
-    } catch (error) {
-        console.error('Error al actualizar un destino:', error);
-        res.status(500).json({ error: 'Ocurrió un error al actualizar el cliente' });
+    } catch (error: any) {
+        res.json({
+            isSuccess: false,
+            mensaje: error.message,
+        });
     }
 };
 
 const setActivoCliente = async (req: Request, res: Response) => {
-    const db = await connect();
     const id = req.params.id;
     const { activo } = req.body;
 
@@ -187,7 +210,7 @@ const setActivoCliente = async (req: Request, res: Response) => {
             mensaje: 'Se requiere del activo'
         })
     }
-    const [rows]: any[] = await db.query(`SELECT * FROM ${tbCliente} WHERE id = ?`, [id]);
+    const [rows]: any[] = await pool.query(`SELECT * FROM ${tbCliente} WHERE id = ?`, [id]);
 
     if (rows.length === 0) {
         return res.json({
@@ -196,7 +219,7 @@ const setActivoCliente = async (req: Request, res: Response) => {
         });
     }
 
-    const [updateResult]: any[] = await db.query(`UPDATE ${tbCliente} SET activo = ? WHERE id = ?`, [activo, id]);
+    const [updateResult]: any[] = await pool.query(`UPDATE ${tbCliente} SET activo = ? WHERE id = ?`, [activo, id]);
 
     if (updateResult.affectedRows === 1) {
         res.json({

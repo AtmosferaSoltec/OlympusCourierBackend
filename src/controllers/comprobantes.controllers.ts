@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
 import axios from "axios";
-import connect from '../mysql';
+import { pool } from '../db';
 import { tbComprobante } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const query = 'SELECT * FROM comprobantes';
-        const destinos = await db.query(query);
+        const destinos: any[] = await pool.query(query);
         res.json(destinos);
     } catch (error) {
         console.error('Error al recuperar datos de la tabla Comprobantes:', error);
@@ -18,8 +17,6 @@ const listarTodos = async (req: Request, res: Response) => {
 
 const insertar = async (req: Request, res: Response) => {
     try {
-
-        const db = await connect();
         const { tipoComprobante, tipoDoc, documento, nombre, direc, correo, items, idReparto } = req.body;
         if (!Array.isArray(items)) {
             console.error('El campo "items" no es una lista.');
@@ -69,7 +66,7 @@ const insertar = async (req: Request, res: Response) => {
             serie = 'BBB1'
         }
         const query = 'SELECT IFNULL(MAX(numero) + 1, 1) AS numero FROM comprobantes WHERE tipo_comprobante = ?'
-        const [{ numero }]: any = await db.query(query, [tipoComprobante]);
+        const [numero]: any[] = await pool.query(query, [tipoComprobante]);
         const url = 'https://api.pse.pe/api/v1/6baf3f2f6c284defa9cf148782cdb136f19c6f2ec1b84e8eb9f4144f67df2145'
         const token = 'eyJhbGciOiJIUzI1NiJ9.ImMzYTljNmI5YWJlZTQ0ZDFiMjExZmRlMzIxNTE1ZDRhM2VkODFlMDQ1OTkyNDMyZDk3NTI2NjVjMDY2NDEzZGUi.oRgBsVpXqZlgJ1OPBQd0TpLEyeFrtWppa2vE92GjYA0'
         const data = {
@@ -141,7 +138,7 @@ const insertar = async (req: Request, res: Response) => {
             const { tipo_de_comprobante, serie, numero, enlace, enlace_del_pdf, enlace_del_xml } = call.data;
 
             const query = 'INSERT INTO comprobantes (tipo_comprobante,serie,numero,enlace,enlace_pdf,enlace_xml,id_reparto) VALUES (?,?,?,?,?,?,?)'
-            const result: any = await db.query(query, [tipo_de_comprobante, serie, numero, enlace, enlace_del_pdf, enlace_del_xml, idReparto]);
+            const [result]: any[] = await pool.query(query, [tipo_de_comprobante, serie, numero, enlace, enlace_del_pdf, enlace_del_xml, idReparto]);
             if (result.affectedRows === 1) {
                 res.json({ message: 'Comprobante insertado correctamente' });
             } else {
@@ -170,7 +167,6 @@ const actualizar = (req: Request, res: Response) => {
 
 };
 const setActivoComprobante = async (req: Request, res: Response) => {
-    const db = await connect();
     const id = req.params.id;
     const { activo } = req.body;
 
@@ -181,7 +177,7 @@ const setActivoComprobante = async (req: Request, res: Response) => {
         })
     }
 
-    const [rows]: any[] = await db.query(`SELECT * FROM ${tbComprobante} WHERE id = ?`, [id]);
+    const [rows]: any[] = await pool.query(`SELECT * FROM ${tbComprobante} WHERE id = ?`, [id]);
 
     if (rows.length === 0) {
         return res.json({
@@ -190,7 +186,7 @@ const setActivoComprobante = async (req: Request, res: Response) => {
         });
     }
 
-    const [updateResult]: any[] = await db.query(`UPDATE ${tbComprobante} SET activo = ? WHERE id = ?`, [activo, id]);
+    const [updateResult]: any[] = await pool.query(`UPDATE ${tbComprobante} SET activo = ? WHERE id = ?`, [activo, id]);
 
     if (updateResult.affectedRows === 1) {
         res.json({

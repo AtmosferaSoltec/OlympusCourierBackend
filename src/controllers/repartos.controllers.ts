@@ -1,13 +1,12 @@
 import { getClienteById, getItemsRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
-import connect from '../mysql';
+import { pool } from '../db';
 import { tbItemReparto, tbReparto } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const queryRepartos = `SELECT * FROM ${tbReparto}`;
-        const [repartos]: any[] = await db.query(queryRepartos);
+        const [repartos]: any[] = await pool.query(queryRepartos);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
                 return {
@@ -46,9 +45,8 @@ const getAllRepartos = async (req: Request, res: Response) => {
 const getReparto = async (req: Request, res: Response) => {
     const repartoId = req.params.id;
     try {
-        const db = await connect();
         const queryReparto = `SELECT * FROM ${tbReparto} WHERE id = ? LIMIT 1`;
-        const [reparto]: any[] = await db.query(queryReparto, [repartoId]);
+        const [reparto]: any[] = await pool.query(queryReparto, [repartoId]);
 
         if (reparto.length === 0) {
             res.status(404).json({ mensaje: 'Reparto no encontrado' });
@@ -88,7 +86,6 @@ const getReparto = async (req: Request, res: Response) => {
 
 const insertReparto = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
 
         if (!Array.isArray(items) || items.some(item => typeof item !== 'object')) {
@@ -114,7 +111,7 @@ const insertReparto = async (req: Request, res: Response) => {
 
 
         const repartoQuery = `INSERT INTO ${tbReparto} (anotacion, clave, id_cliente, id_usuario, total) VALUES (?,?,?,?,?)`;
-        const [repartoResult]: any[] = await db.query(repartoQuery, [anotacion, clave, id_cliente, id_usuario, total]);
+        const [repartoResult]: any[] = await pool.query(repartoQuery, [anotacion, clave, id_cliente, id_usuario, total]);
 
         if (repartoResult.affectedRows !== 1) {
             return res.json({
@@ -126,7 +123,7 @@ const insertReparto = async (req: Request, res: Response) => {
         for (const item of items) {
             const { num_guia, detalle, cant, precio, id_tipo_paquete } = item;
             const itemQuery = `INSERT INTO ${tbItemReparto} (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)`;
-            const [itemResult]: any[] = await db.query(itemQuery, [num_guia, detalle, cant, precio, repartoResult.insertId, id_tipo_paquete]);
+            const [itemResult]: any[] = await pool.query(itemQuery, [num_guia, detalle, cant, precio, repartoResult.insertId, id_tipo_paquete]);
 
             if (itemResult.affectedRows === 0) {
                 return res.json({
@@ -150,12 +147,11 @@ const insertReparto = async (req: Request, res: Response) => {
 
 const updateReparto = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const id = req.params.id;
         const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
 
         // Verificar si el reparto existe
-        const [repartoRows]: any[] = await db.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
+        const [repartoRows]: any[] = await pool.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
 
         if (repartoRows.length === 0) {
             return res.status(404).json({ error: `El reparto con ID ${id} no existe` });
@@ -163,18 +159,18 @@ const updateReparto = async (req: Request, res: Response) => {
 
         // Actualizar la información del reparto
         const actualizarRepartoQuery = `UPDATE ${tbReparto} SET anotacion = ?, clave = ?, id_cliente = ?, id_usuario = ? WHERE id = ?`;
-        const [repartoResult]: any[] = await db.query(actualizarRepartoQuery, [anotacion, clave, id_cliente, id_usuario, id]);
+        const [repartoResult]: any[] = await pool.query(actualizarRepartoQuery, [anotacion, clave, id_cliente, id_usuario, id]);
 
         // Actualizar los items del reparto si se proporcionan
         if (items && items.length > 0) {
             // Eliminar los items existentes
-            await db.query(`DELETE FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
+            await pool.query(`DELETE FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
 
             // Insertar los nuevos items
             const insertarItemQuery = `INSERT INTO ${tbItemReparto} (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)`;
             for (const item of items) {
                 const { num_guia, detalle, cant, precio, id_tipo_paquete } = item;
-                await db.query(insertarItemQuery, [num_guia, detalle, cant, precio, id, id_tipo_paquete]);
+                await pool.query(insertarItemQuery, [num_guia, detalle, cant, precio, id, id_tipo_paquete]);
             }
         }
 
@@ -194,13 +190,12 @@ const updateReparto = async (req: Request, res: Response) => {
 
 const setActivoReparto = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const id = req.params.id;
         const { activo } = req.body;
 
-        if(!activo){
+        if (!activo) {
             return res.json({
-                isSuccess:false,
+                isSuccess: false,
                 mensaje: 'Se requiere del activo'
             })
         }
@@ -213,7 +208,7 @@ const setActivoReparto = async (req: Request, res: Response) => {
         }
 
         // Verificar la existencia del reparto
-        const [repartoRows]: any[] = await db.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
+        const [repartoRows]: any[] = await pool.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
         if (repartoRows.length === 0) {
             return res.json({
                 isSuccess: false,
@@ -222,9 +217,9 @@ const setActivoReparto = async (req: Request, res: Response) => {
         }
 
         // Eliminar los items relacionados al reparto
-        await db.query(`UPDATE ${tbItemReparto} SET activo = ? WHERE id_reparto = ?`, [activo, id]);
+        await pool.query(`UPDATE ${tbItemReparto} SET activo = ? WHERE id_reparto = ?`, [activo, id]);
 
-        const [updateResult]: any[] = await db.query(`UPDATE ${tbReparto} SET activo = ? WHERE id = ?`, [activo,id]);
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tbReparto} SET activo = ? WHERE id = ?`, [activo, id]);
 
         if (updateResult.affectedRows === 1) {
             res.json({
@@ -247,14 +242,13 @@ const setActivoReparto = async (req: Request, res: Response) => {
 
 const darConformidad = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const { id_reparto, id_usuario, url_foto } = req.body;
 
         // Obtener la fecha actual en formato YYYY-MM-DD HH:mm:ss
         const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
         const query = `UPDATE ${tbReparto} SET estado = ?, fecha_entrega = ?, id_repartidor = ?, url_foto = ? WHERE id = ?`;
-        const [result]: any[] = await db.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
+        const [result]: any[] = await pool.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
 
         if (result.affectedRows > 0) {
             res.json({

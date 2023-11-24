@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
-import connect from '../mysql';
+import { pool } from '../db';
 
 const tabla = 'tipo_paquete';
 
 const getAllPaquetes = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const query = `SELECT * FROM ${tabla}`;
-        const [call]: any[] = await db.query(query);
+        const [call]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: call
@@ -23,9 +22,8 @@ const getAllPaquetes = async (req: Request, res: Response) => {
 const getPaquete = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
-        const db = await connect();
         const query = `SELECT * FROM ${tabla} WHERE id = ? LIMIT 1`;
-        const [call]: any[] = await db.query(query, [id]);
+        const [call]: any[] = await pool.query(query, [id]);
         if (call.length === 0) {
             return res.status(404).json({
                 isSuccess: false,
@@ -55,9 +53,7 @@ const insertPaquete = async (req: Request, res: Response) => {
             });
         }
 
-        const db = await connect();
-
-        const [result]: any[] = await db.query(`INSERT INTO ${tabla} (nombre) VALUES (?)`, [nombre]);
+        const [result]: any[] = await pool.query(`INSERT INTO ${tabla} (nombre) VALUES (?)`, [nombre]);
 
         if (result.affectedRows === 1) {
 
@@ -82,7 +78,6 @@ const insertPaquete = async (req: Request, res: Response) => {
 
 const updatePaquete = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const id = req.params.id;
         const { nombre } = req.body;
         if (!nombre) {
@@ -93,7 +88,7 @@ const updatePaquete = async (req: Request, res: Response) => {
         }
 
         const query = `UPDATE ${tabla} SET nombre = ? WHERE id = ?`;
-        const [result]: any[] = await db.query(query, [nombre, id]);
+        const [result]: any[] = await pool.query(query, [nombre, id]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -116,7 +111,6 @@ const updatePaquete = async (req: Request, res: Response) => {
 
 const setActivoPaquete = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const id = req.params.id;
 
         const { activo } = req.body;
@@ -128,7 +122,7 @@ const setActivoPaquete = async (req: Request, res: Response) => {
             })
         }
 
-        const [rows]: any[] = await db.query(`SELECT * FROM ${tabla} WHERE id = ?`, [id]);
+        const [rows]: any[] = await pool.query(`SELECT * FROM ${tabla} WHERE id = ?`, [id]);
         if (rows.length === 0) {
             res.json({
                 isSuccess: false,
@@ -137,7 +131,7 @@ const setActivoPaquete = async (req: Request, res: Response) => {
             return;
         }
 
-        const [updateResult]: any[] = await db.query(`UPDATE ${tabla} SET activo = ? WHERE id = ?`, [activo, id]);
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tabla} SET activo = ? WHERE id = ?`, [activo, id]);
 
         if (updateResult.affectedRows === 1) {
             res.json({

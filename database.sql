@@ -56,7 +56,7 @@ VALUES
 CREATE TABLE cliente (
   id INT AUTO_INCREMENT PRIMARY KEY,
   cod_tipodoc CHAR(1),
-  documento VARCHAR(20) NOT NULL,
+  documento VARCHAR(20) UNIQUE NOT NULL,
   nombres VARCHAR(255) NOT NULL,
   telefono VARCHAR(15) NOT NULL,
   correo VARCHAR(255) DEFAULT '',

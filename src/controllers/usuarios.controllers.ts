@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import connect from '../mysql';
+import { pool } from '../db';
 import { tbUsuario } from '../func/tablas';
 
 const login = async (req: Request, res: Response) => {
-    const db = await connect();
     const { documento, clave } = req.body;
 
     if (!documento || !clave) {
@@ -15,7 +14,7 @@ const login = async (req: Request, res: Response) => {
 
     try {
         const consulta = `SELECT id FROM ${tbUsuario} WHERE documento = ? AND clave = ? LIMIT 1`;
-        const resultados: any = await db.query(consulta, [documento, clave]);
+        const [resultados]: any[] = await pool.query(consulta, [documento, clave]);
         if (resultados.length > 0) {
             res.json({
                 isSuccess: true,
@@ -39,9 +38,8 @@ const login = async (req: Request, res: Response) => {
 
 const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const query = `SELECT * FROM ${tbUsuario}`;
-        const [destinos]: any = await db.query(query);
+        const [destinos]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: destinos
@@ -56,10 +54,9 @@ const getAllUsuarios = async (req: Request, res: Response) => {
 
 const getUsuario = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const { id } = req.params;
         const query = `SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`;
-        const resultado: any = await db.query(query, [id]);
+        const resultado: any = await pool.query(query, [id]);
 
         if (resultado.length !== undefined && resultado.length > 0) {
             const usuario = resultado[0];
@@ -85,7 +82,6 @@ const getUsuario = async (req: Request, res: Response) => {
 
 const insertUsuario = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol } = req.body;
         const valores = [
             documento,
@@ -98,8 +94,8 @@ const insertUsuario = async (req: Request, res: Response) => {
             clave || '1234',
             rol || 'U'
         ];
-        const query = 'INSERT INTO usuarios (documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol) VALUES (?,?,?,?,?,?,?,?,?)'
-        const result: any = await db.query(query, valores);
+        const query = `INSERT INTO ${tbUsuario} (documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol) VALUES (?,?,?,?,?,?,?,?,?)`
+        const [result]: any[] = await pool.query(query, valores);
 
         if (result.affectedRows === 1) {
             res.json({ mensaje: 'Usuario insertado correctamente' });
@@ -117,11 +113,10 @@ const insertUsuario = async (req: Request, res: Response) => {
 
 const updateUsuario = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const destinoId = req.params.id;
         const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol } = req.body;
         const query = 'UPDATE usuarios SET documento = ?, nombres = ?, ape_materno = ?, ape_paterno = ?, telefono = ?, correo = ?, fecha_nacimiento = ?, clave = ?, rol = ? WHERE id = ?';
-        const result: any = await db.query(query, [documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol, destinoId]);
+        const [result]: any[] = await pool.query(query, [documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol, destinoId]);
 
         if (result.affectedRows === 1) {
             res.json({ mensaje: 'Usuario actualizado correctamente' });
@@ -140,7 +135,6 @@ const updateUsuario = async (req: Request, res: Response) => {
 
 const setActivoUsuario = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const id = req.params.id;
         const { activo } = req.body;
 
@@ -151,7 +145,7 @@ const setActivoUsuario = async (req: Request, res: Response) => {
             })
         }
 
-        const [verificar]: any[] = await db.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
+        const [verificar]: any[] = await pool.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
         if (verificar.length === 0) {
             res.json({
                 isSuccess: false,
@@ -160,7 +154,7 @@ const setActivoUsuario = async (req: Request, res: Response) => {
             return;
         }
 
-        const [updateResult]: any[] = await db.query(`UPDATE ${tbUsuario} SET activo = ? WHERE id = ?`, [activo, id]);
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tbUsuario} SET activo = ? WHERE id = ?`, [activo, id]);
 
         if (updateResult.affectedRows === 1) {
             res.json({

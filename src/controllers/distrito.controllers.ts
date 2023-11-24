@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
-import connect from '../mysql';
+import { pool } from '../db';
 import { tbDistrito } from '../func/tablas';
 
 const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const query = `SELECT * FROM ${tbDistrito}`;
-        const [call] = await db.query(query);
+        const [call] : any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: call
@@ -22,9 +21,8 @@ const getAllDistritos = async (req: Request, res: Response) => {
 const getDistrito = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
-        const db = await connect();
         const query = `SELECT * FROM ${tbDistrito} WHERE id = ? LIMIT 1`;
-        const [call]: any[] = await db.query(query, [id]);
+        const [call]: any[] = await pool.query(query, [id]);
         if (call.length === 0) {
             return res.status(404).json({
                 isSuccess: false,
@@ -53,9 +51,8 @@ const insertDistrito = async (req: Request, res: Response) => {
                 mensaje: 'El campo "nombre" es requerido.'
             });
         }
-        const db = await connect();
 
-        const [result]: any[] = await db.query(`INSERT INTO ${tbDistrito} (nombre) VALUES (?)`, [nombre]);
+        const [result]: any[] = await pool.query(`INSERT INTO ${tbDistrito} (nombre) VALUES (?)`, [nombre]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -79,7 +76,6 @@ const insertDistrito = async (req: Request, res: Response) => {
 
 const updateDistrito = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const destinoId = req.params.id;
         const { nombre } = req.body;
 
@@ -91,7 +87,7 @@ const updateDistrito = async (req: Request, res: Response) => {
         }
 
         const query = `UPDATE ${tbDistrito} SET nombre = ? WHERE id = ?`;
-        const [result]: any[] = await db.query(query, [nombre, destinoId]);
+        const [result]: any[] = await pool.query(query, [nombre, destinoId]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -114,7 +110,6 @@ const updateDistrito = async (req: Request, res: Response) => {
 
 const setActivoDistrito = async (req: Request, res: Response) => {
     try {
-        const db = await connect();
         const id = req.params.id;
         const { activo } = req.body;
 
@@ -125,7 +120,7 @@ const setActivoDistrito = async (req: Request, res: Response) => {
             })
         }
 
-        const [rows]: any[] = await db.query(`SELECT * FROM ${tbDistrito} WHERE id = ?`, [id]);
+        const [rows]: any[] = await pool.query(`SELECT * FROM ${tbDistrito} WHERE id = ?`, [id]);
         if (rows.length === 0) {
             res.json({
                 isSuccess: false,
@@ -134,7 +129,7 @@ const setActivoDistrito = async (req: Request, res: Response) => {
             return;
         };
 
-        const [updateResult]: any[] = await db.query(`UPDATE ${tbDistrito} SET activo = ? WHERE id = ?`, [activo,id]);
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tbDistrito} SET activo = ? WHERE id = ?`, [activo,id]);
 
         if (updateResult.affectedRows === 1) {
             res.json({
