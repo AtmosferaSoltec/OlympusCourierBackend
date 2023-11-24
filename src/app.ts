@@ -1,25 +1,29 @@
+import https from 'https';
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import fs from 'fs';
 import { router } from './routes';
 
 const puerto = process.env.PORT || 3000;
 const app = express();
 app.use(cors());
-
-
 app.use(express.json())
-
 app.use('/api', router);
-
-async function startServer() {
-    try {
-        app.listen(puerto, () => {
-            console.log(`Servidor Express escuchando en el puerto ${puerto}`);
-        });
-    } catch (error) {
-        console.error('Error al conectar a la base de datos:', error);
+app.use((req, res, next) => {
+    if (!req.secure) {
+        return res.redirect(`https://${req.headers.host}${req.url}`);
     }
-}
+    next();
+});
 
-startServer();
+const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/fullchain.pem'),
+};
+
+const server = https.createServer(options, app);
+
+server.listen(puerto, () => {
+    console.log(`Servidor HTTPS en el puerto ${puerto}`);
+});
