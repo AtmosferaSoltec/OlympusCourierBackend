@@ -56,7 +56,7 @@ const getUsuario = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const query = `SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`;
-        const resultado: any = await pool.query(query, [id]);
+        const [resultado]: any[] = await pool.query(query, [id]);
 
         if (resultado.length !== undefined && resultado.length > 0) {
             const usuario = resultado[0];
@@ -82,7 +82,7 @@ const getUsuario = async (req: Request, res: Response) => {
 
 const insertUsuario = async (req: Request, res: Response) => {
     try {
-        const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol } = req.body;
+        const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nac, clave, cod_rol } = req.body;
         const valores = [
             documento,
             nombres,
@@ -90,11 +90,11 @@ const insertUsuario = async (req: Request, res: Response) => {
             ape_paterno || '',
             telefono || '',
             correo || '',
-            fecha_nacimiento || '1900-01-01',
+            fecha_nac || '1900-01-01',
             clave || '1234',
-            rol || 'U'
+            cod_rol || 'U'
         ];
-        const query = `INSERT INTO ${tbUsuario} (documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol) VALUES (?,?,?,?,?,?,?,?,?)`
+        const query = `INSERT INTO ${tbUsuario} (documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nac, clave, cod_rol) VALUES (?,?,?,?,?,?,?,?,?)`
         const [result]: any[] = await pool.query(query, valores);
 
         if (result.affectedRows === 1) {

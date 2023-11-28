@@ -10,6 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json())
 app.use('/api', router);
+
 app.use((req, res, next) => {
     if (!req.secure) {
         return res.redirect(`https://${req.headers.host}${req.url}`);
@@ -17,7 +18,12 @@ app.use((req, res, next) => {
     next();
 });
 
-const options = {
+app.listen(puerto, () => {
+    console.log(`Servidor HTTPS en el puerto ${puerto}`);
+});
+
+
+/*const options = {
     key: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/fullchain.pem'),
 };
@@ -26,4 +32,4 @@ const server = https.createServer(options, app);
 
 server.listen(puerto, () => {
     console.log(`Servidor HTTPS en el puerto ${puerto}`);
-});
+});*/
