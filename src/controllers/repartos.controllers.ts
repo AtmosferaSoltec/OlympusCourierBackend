@@ -79,7 +79,10 @@ const getReparto = async (req: Request, res: Response) => {
         const [reparto]: any[] = await pool.query(queryReparto, [repartoId]);
 
         if (reparto.length === 0) {
-            res.status(404).json({ mensaje: 'Reparto no encontrado' });
+            res.json({
+                isSuccess: false,
+                mensaje: 'Reparto no encontrado'
+            });
             return;
         }
 
@@ -263,7 +266,7 @@ const setActivoReparto = async (req: Request, res: Response) => {
             });
         };
     } catch (err) {
-        res.status(500).json({
+        res.json({
             isSuccess: false,
             mensaje: err || 'Error desconocido'
         });

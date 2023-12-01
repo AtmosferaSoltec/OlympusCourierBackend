@@ -141,6 +141,7 @@ CREATE TABLE reparto (
   id_usuario INT NOT NULL,
   id_repartidor INT,
   id_comprobante INT,
+  url_foto VARCHAR(255),
   total DECIMAL(10, 2),
   activo CHAR(1) DEFAULT 'S',
   FOREIGN KEY (id_cliente) REFERENCES cliente(id),
@@ -163,10 +164,26 @@ CREATE TABLE item_reparto (
 );
 
 
+CREATE TABLE registro (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    tabla VARCHAR(50),
+    id_tabla INT,
+    fecha TIMESTAMP DEFAULT NOW(),
+    id_user INT,
+    campo VARCHAR(50),
+    valor_old VARCHAR(255),
+    valor_new VARCHAR(255),
+    pc VARCHAR(50),
+    ip VARCHAR(50),
+    FOREIGN KEY (id_user) REFERENCES usuario(id)
+);
+
+
+
 
 
 /**Resetear valores de una tabla*/
 SET foreign_key_checks = 0;
-TRUNCATE TABLE comprobante;
-ALTER TABLE comprobante AUTO_INCREMENT = 1;
+TRUNCATE TABLE usuario;
+ALTER TABLE usuario AUTO_INCREMENT = 1;
 SET foreign_key_checks = 1;

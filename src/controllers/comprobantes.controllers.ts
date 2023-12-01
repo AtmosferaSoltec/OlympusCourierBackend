@@ -166,6 +166,7 @@ const getFechaEmision = () => {
 const actualizar = (req: Request, res: Response) => {
 
 };
+
 const setActivoComprobante = async (req: Request, res: Response) => {
     const id = req.params.id;
     const { activo } = req.body;
