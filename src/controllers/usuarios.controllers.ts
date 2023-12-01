@@ -38,7 +38,7 @@ const login = async (req: Request, res: Response) => {
 
 const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbUsuario}`;
+        const query = `SELECT * FROM ${tbUsuario} WHERE activo != "E"`;
         const [destinos]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
@@ -94,13 +94,29 @@ const insertUsuario = async (req: Request, res: Response) => {
             clave || '1234',
             cod_rol || 'U'
         ];
+
+        const [verificarDoc]: any[] = await pool.query(`SELECT documento FROM ${tbUsuario} WHERE documento = ?`, [documento])
+
+        if (verificarDoc.length > 0){
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Documento ya se encuentra registrado'
+            })
+        }
+
         const query = `INSERT INTO ${tbUsuario} (documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nac, clave, cod_rol) VALUES (?,?,?,?,?,?,?,?,?)`
         const [result]: any[] = await pool.query(query, valores);
 
         if (result.affectedRows === 1) {
-            res.json({ mensaje: 'Usuario insertado correctamente' });
+            res.json({
+                isSuccess: true,
+                mensaje: 'Usuario insertado correctamente'
+            });
         } else {
-            res.status(500).json({ error: 'No se pudo insertar' });
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo insertar'
+            });
         }
     } catch (error) {
         res.json({

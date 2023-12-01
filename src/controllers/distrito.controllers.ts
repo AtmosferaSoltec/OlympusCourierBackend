@@ -4,7 +4,7 @@ import { tbDistrito } from '../func/tablas';
 
 const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbDistrito}`;
+        const query = `SELECT * FROM ${tbDistrito} WHERE activo != "E"`;
         const [call] : any[] = await pool.query(query);
         res.json({
             isSuccess: true,

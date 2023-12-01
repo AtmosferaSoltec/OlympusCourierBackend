@@ -3,6 +3,36 @@ import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbItemReparto, tbReparto } from '../func/tablas';
 
+/**
+ * Devolver por rangos
+ * 
+ const { page = 1, pageSize = 50, desde, hasta } = req.query;
+
+  const offset = (page - 1) * pageSize;
+  const limit = parseInt(pageSize);
+
+  // Filtro por fecha
+  const fechaFilter = desde && hasta ? `WHERE fecha BETWEEN ? AND ?` : '';
+  const fechaParams = desde && hasta ? [desde, hasta] : [];
+
+  // Consulta SQL paginada y filtrada
+  const query = `
+    SELECT * FROM movimientos
+    ${fechaFilter}
+    ORDER BY fecha DESC
+    LIMIT ?, ?;
+  `;
+
+  try {
+    const [rows] = await pool.query(query, [...fechaParams, offset, limit]);
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Error al recuperar movimientos:', error);
+    res.status(500).json({ error: 'Error al recuperar movimientos' });
+  }
+ * **/
+
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
         const queryRepartos = `SELECT * FROM ${tbReparto}`;

@@ -161,3 +161,12 @@ CREATE TABLE item_reparto (
   FOREIGN KEY (id_reparto) REFERENCES reparto(id),
   FOREIGN KEY (id_tipo_paquete) REFERENCES tipo_paquete(id)
 );
+
+
+
+
+/**Resetear valores de una tabla*/
+SET foreign_key_checks = 0;
+TRUNCATE TABLE comprobante;
+ALTER TABLE comprobante AUTO_INCREMENT = 1;
+SET foreign_key_checks = 1;
