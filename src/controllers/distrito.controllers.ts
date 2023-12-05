@@ -4,16 +4,16 @@ import { tbDistrito } from '../func/tablas';
 
 const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbDistrito} WHERE activo != "E"`;
+        const query = `SELECT * FROM ${tbDistrito}`;
         const [call] : any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: call
         });
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message,
         });
     }
 };
@@ -24,7 +24,7 @@ const getDistrito = async (req: Request, res: Response) => {
         const query = `SELECT * FROM ${tbDistrito} WHERE id = ? LIMIT 1`;
         const [call]: any[] = await pool.query(query, [id]);
         if (call.length === 0) {
-            return res.status(404).json({
+            return res.json({
                 isSuccess: false,
                 mensaje: `No se encontró el ID ${id}`
             });
@@ -34,10 +34,10 @@ const getDistrito = async (req: Request, res: Response) => {
             isSuccess: true,
             data: call[0]
         });
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message
         });
     }
 };
@@ -66,17 +66,17 @@ const insertDistrito = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo insertar el distrito'
             });
         }
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error.message
         });
     }
 };
 
 const updateDistrito = async (req: Request, res: Response) => {
     try {
-        const destinoId = req.params.id;
+        const id = req.params.id;
         const { nombre } = req.body;
 
         if (!nombre) {
@@ -86,8 +86,17 @@ const updateDistrito = async (req: Request, res: Response) => {
             });
         }
 
+        //Verificar si existe el distrito
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbDistrito} WHERE id = ?`, [id]);
+        if (verificar[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Distrito no encontrado'
+            });
+        }
+
         const query = `UPDATE ${tbDistrito} SET nombre = ? WHERE id = ?`;
-        const [result]: any[] = await pool.query(query, [nombre, destinoId]);
+        const [result]: any[] = await pool.query(query, [nombre, id]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -100,10 +109,10 @@ const updateDistrito = async (req: Request, res: Response) => {
                 mensaje: 'No se encontró el distrito para actualizar'
             });
         }
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error.message
         });
     }
 };
@@ -120,15 +129,16 @@ const setActivoDistrito = async (req: Request, res: Response) => {
             })
         }
 
-        const [rows]: any[] = await pool.query(`SELECT * FROM ${tbDistrito} WHERE id = ?`, [id]);
-        if (rows.length === 0) {
-            res.json({
+        //Verificar si el distrito existe
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbDistrito} WHERE id = ?`, [id]);
+        if (verificar[0].count === 0) {
+            return res.json({
                 isSuccess: false,
-                mensaje: `El registro con ID ${id} no existe`
+                mensaje: 'Distrito no encontrado'
             });
-            return;
-        };
+        }
 
+        //Actualizar el activo
         const [updateResult]: any[] = await pool.query(`UPDATE ${tbDistrito} SET activo = ? WHERE id = ?`, [activo,id]);
 
         if (updateResult.affectedRows === 1) {
@@ -143,10 +153,10 @@ const setActivoDistrito = async (req: Request, res: Response) => {
             });
         };
 
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error.message
         });
     }
 };

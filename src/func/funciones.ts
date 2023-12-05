@@ -4,28 +4,21 @@ import { tbCliente, tbDistrito, tbItemReparto, tbTipoDoc, tbUsuario } from './ta
 export const getDistritoById = async (id: number) => {
     try {
         const [call]: any[] = await pool.query(`SELECT nombre FROM ${tbDistrito} WHERE id = ? LIMIT 1`, [id]);
-        if (call.length === 0) {
-            return '';
-        } else {
-            return call[0].nombre;
-        }
+        return call[0]?.nombre || null;
     } catch {
-        return '';
+        return null;
     }
 };
 
 export const getTipoDocByCod = async (cod: number) => {
     try {
         const [call]: any[] = await pool.query(`SELECT * FROM ${tbTipoDoc} WHERE cod = ? LIMIT 1`, [cod]);
-        if (call.length === 0) {
-            return null;
-        } else {
+        if (call[0]) {
             delete call[0].id;
             delete call[0].cod;
-            return call[0];
         }
-    } catch (err) {
-        console.log(err);
+        return call[0] || null;
+    } catch {
         return null;
     }
 };

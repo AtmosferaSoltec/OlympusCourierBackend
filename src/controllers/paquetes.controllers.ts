@@ -11,10 +11,10 @@ const getAllPaquetes = async (req: Request, res: Response) => {
             isSuccess: true,
             data: call
         });
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message
         });
     }
 };
@@ -25,9 +25,9 @@ const getPaquete = async (req: Request, res: Response) => {
         const query = `SELECT * FROM ${tabla} WHERE id = ? LIMIT 1`;
         const [call]: any[] = await pool.query(query, [id]);
         if (call.length === 0) {
-            return res.status(404).json({
+            return res.json({
                 isSuccess: false,
-                mensaje: `No se encontró el ID ${id}`
+                mensaje: `No se encontró el ID`
             });
         }
 
@@ -35,10 +35,10 @@ const getPaquete = async (req: Request, res: Response) => {
             isSuccess: true,
             data: call[0]
         });
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message
         });
     }
 };
@@ -46,17 +46,27 @@ const getPaquete = async (req: Request, res: Response) => {
 const insertPaquete = async (req: Request, res: Response) => {
     try {
         const { nombre } = req.body;
+
+        //Verificarlos cmapos estan completos
         if (!nombre) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El campo "nombre" es requerido.'
+                mensaje: 'El campo nombre es requerido.'
+            });
+        }
+
+        //Verificar si el nombre ya existe en la tabla
+        const [rows]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tabla} WHERE nombre = ?`, [nombre]);
+        if (rows[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El tipo paquete ${nombre} ya existe`
             });
         }
 
         const [result]: any[] = await pool.query(`INSERT INTO ${tabla} (nombre) VALUES (?)`, [nombre]);
 
         if (result.affectedRows === 1) {
-
             res.json({
                 isSuccess: true,
                 mensaje: 'Tipo Paquete insertado correctamente',
@@ -68,10 +78,10 @@ const insertPaquete = async (req: Request, res: Response) => {
                 data: 'No se pudo insertar',
             });
         }
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message
         });
     }
 };
@@ -80,6 +90,8 @@ const updatePaquete = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
         const { nombre } = req.body;
+
+        //Verificar si existe el nombre
         if (!nombre) {
             return res.json({
                 isSuccess: false,
@@ -87,6 +99,16 @@ const updatePaquete = async (req: Request, res: Response) => {
             });
         }
 
+        // Verificar que el paquete exista
+        const [rows]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tabla} WHERE id = ?`, [id]);
+        if (rows[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El paquete con ID: ${id} no existe`
+            });
+        }
+
+        //Actualizar el Paquete
         const query = `UPDATE ${tabla} SET nombre = ? WHERE id = ?`;
         const [result]: any[] = await pool.query(query, [nombre, id]);
 
@@ -101,10 +123,10 @@ const updatePaquete = async (req: Request, res: Response) => {
                 mensaje: 'No se encontró el id para actualizar'
             });
         }
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error.message
         });
     }
 };
@@ -121,18 +143,18 @@ const setActivoPaquete = async (req: Request, res: Response) => {
                 mensaje: 'Se requiere del activo'
             })
         }
-
-        const [rows]: any[] = await pool.query(`SELECT * FROM ${tabla} WHERE id = ?`, [id]);
-        if (rows.length === 0) {
-            res.json({
+        
+        // Verificar que el paquete exista con COUNT(*) as count
+        const [rows]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tabla} WHERE id = ?`, [id]);
+        if (rows[0].count === 0) {
+            return res.json({
                 isSuccess: false,
-                mensaje: `El registro con ID: ${id} no existe`
+                mensaje: `El paquete con ID: ${id} no existe`
             });
-            return;
         }
 
+        //Actualizar el activo del paquete
         const [updateResult]: any[] = await pool.query(`UPDATE ${tabla} SET activo = ? WHERE id = ?`, [activo, id]);
-
         if (updateResult.affectedRows === 1) {
             res.json({
                 isSuccess: true,
@@ -144,10 +166,10 @@ const setActivoPaquete = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo actualizar el activo'
             });
         };
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error.message
         });
     }
 }

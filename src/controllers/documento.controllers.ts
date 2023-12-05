@@ -10,23 +10,12 @@ const getAllDocumento = async (req: Request, res: Response) => {
             isSuccess: true,
             data: call
         });
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message
         });
     }
 };
-const getDocumento = (req: Request, res: Response) => {
-};
 
-const insertDocumento = (req: Request, res: Response) => {
-};
-
-const updateDocumento = (req: Request, res: Response) => {
-};
-
-const setActivoDocumento = (req: Request, res: Response) => {
-};
-
-export default { getAllDocumento, getDocumento, insertDocumento, updateDocumento, setActivoDocumento }
+export default { getAllDocumento }

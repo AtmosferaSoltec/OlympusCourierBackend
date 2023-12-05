@@ -27,18 +27,17 @@ const login = async (req: Request, res: Response) => {
                 mensaje: 'Credenciales incorrectas'
             });
         }
-    } catch (err) {
-        console.error(err);
+    } catch (err:any) {
         res.json({
             isSuccess: false,
-            mensaje: err
+            mensaje: err.message
         });
     }
 };
 
 const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbUsuario} WHERE activo != "E"`;
+        const query = `SELECT * FROM ${tbUsuario}`;
         const [destinos]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
@@ -55,22 +54,22 @@ const getAllUsuarios = async (req: Request, res: Response) => {
 const getUsuario = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const query = `SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`;
+        const query = `SELECT * FROM ${tbUsuario} WHERE id = ?`;
         const [resultado]: any[] = await pool.query(query, [id]);
 
-        if (resultado.length !== undefined && resultado.length > 0) {
-            const usuario = resultado[0];
-            delete usuario.clave;
-            res.json({
-                isSuccess: true,
-                data: usuario
-            });
-        } else {
-            res.json({
+        if (resultado.length === 0) {
+            return res.json({
                 isSuccess: false,
-                mensaje: 'Usuario no encontrado'
+                mensaje: `No se encontró el ID: ${id}`
             });
         }
+        
+        delete resultado[0].clave;
+        res.json({
+            isSuccess: true,
+            data: resultado[0]
+        });
+
     } catch (error) {
         res.json({
             isSuccess: false,
@@ -82,35 +81,53 @@ const getUsuario = async (req: Request, res: Response) => {
 
 const insertUsuario = async (req: Request, res: Response) => {
     try {
-        const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nac, clave, cod_rol } = req.body;
-        const valores = [
-            documento,
-            nombres,
-            ape_materno || '',
-            ape_paterno || '',
-            telefono || '',
-            correo || '',
-            fecha_nac || '1900-01-01',
-            clave || '1234',
-            cod_rol || 'U'
-        ];
 
-        const [verificarDoc]: any[] = await pool.query(`SELECT documento FROM ${tbUsuario} WHERE documento = ?`, [documento])
+        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol } = req.body;
 
-        if (verificarDoc.length > 0){
+        // Validar si los campos estan vacios
+        if (!documento || !nombres || !ape_paterno || !ape_materno || !telefono || !correo || !fecha_nac || !clave || !cod_rol) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Por favor, proporciona todos los campos.'
+            });
+        }
+
+        // Validar si el documento ya existe
+        const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ?`, [documento]);
+        if (documentoExistente[0].count > 0) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Documento ya se encuentra registrado'
             })
         }
 
-        const query = `INSERT INTO ${tbUsuario} (documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nac, clave, cod_rol) VALUES (?,?,?,?,?,?,?,?,?)`
-        const [result]: any[] = await pool.query(query, valores);
+        //Validar si el correo ya existe
+        const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ?`, [correo]);
+        if (correoExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Correo ya se encuentra registrado'
+            })
+        }
+
+        //Validad si el telefono ya existe
+        const [telefonoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE telefono = ?`, [telefono]);
+        if (telefonoExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Telefono ya se encuentra registrado'
+            })
+        }
+
+        //Insertar usuario
+        const query = `INSERT INTO ${tbUsuario} (documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol) VALUES (?,?,?,?,?,?,?,?,?)`;
+        const [result]: any[] = await pool.query(query, [documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol]);
 
         if (result.affectedRows === 1) {
             res.json({
                 isSuccess: true,
-                mensaje: 'Usuario insertado correctamente'
+                mensaje: 'Usuario insertado correctamente',
+                data: result.insertId
             });
         } else {
             res.json({
@@ -118,10 +135,11 @@ const insertUsuario = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo insertar'
             });
         }
-    } catch (error) {
+
+    } catch (error: any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message,
             data: null
         });
     }
@@ -129,25 +147,69 @@ const insertUsuario = async (req: Request, res: Response) => {
 
 const updateUsuario = async (req: Request, res: Response) => {
     try {
-        const destinoId = req.params.id;
+        const id = req.params.id;
         const { documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol } = req.body;
-        const query = 'UPDATE usuarios SET documento = ?, nombres = ?, ape_materno = ?, ape_paterno = ?, telefono = ?, correo = ?, fecha_nacimiento = ?, clave = ?, rol = ? WHERE id = ?';
-        const [result]: any[] = await pool.query(query, [documento, nombres, ape_materno, ape_paterno, telefono, correo, fecha_nacimiento, clave, rol, destinoId]);
+
+        //Verificar si existe el usuario
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ?`, [id]);
+        if (verificar[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Usuario no encontrado'
+            });
+        }
+
+        // Validar si el documento ya existe
+        const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ?`, [documento]);
+        if (documentoExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El documento ya existe en otro usuario'
+            });
+        }
+
+        //Validar si el telefono ya existe
+        const [telefonoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE telefono = ?`, [telefono]);
+        if (telefonoExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El telefono ya existe en otro usuario'
+            });
+        }
+
+        //Validar si el correo ya existe
+        const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ?`, [correo]);
+        if (correoExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El correo ya existe en otro usuario'
+            });
+        }
+
+        // Actualizar usuario
+        const query = `UPDATE ${tbUsuario} SET documento = ?, nombres = ?, ape_paterno = ?, ape_materno = ?, telefono = ?, correo = ?, fecha_nacimiento = ?, clave = ?, rol = ? WHERE id = ?`;
+        const [result]: any[] = await pool.query(query, [documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nacimiento, clave, rol, id]);
 
         if (result.affectedRows === 1) {
-            res.json({ mensaje: 'Usuario actualizado correctamente' });
+
+            res.json({
+                isSuccess: true,
+                mensaje: 'Usuario actualizado correctamente'
+            });
         } else {
-            res.status(500).json({ error: 'No se pudo actualizar' });
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo insertar'
+            });
         }
-    } catch (error) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
-            mensaje: error,
+            mensaje: error.message,
             data: null
         });
     }
 };
-
 
 const setActivoUsuario = async (req: Request, res: Response) => {
     try {
@@ -157,17 +219,18 @@ const setActivoUsuario = async (req: Request, res: Response) => {
         if (!activo) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'Se requiere del activo'
+                mensaje: 'Se requiere del estado'
             })
         }
 
-        const [verificar]: any[] = await pool.query(`SELECT * FROM ${tbUsuario} WHERE id = ? LIMIT 1`, [id]);
-        if (verificar.length === 0) {
-            res.json({
+        //Verificar si el usuario existe con COUNT(*) AS
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ?`, [id]);
+
+        if (verificar[0].count === 0) {
+            return res.json({
                 isSuccess: false,
-                mensaje: 'Cliente no encontrado'
+                mensaje: 'Usuario no encontrado'
             });
-            return;
         }
 
         const [updateResult]: any[] = await pool.query(`UPDATE ${tbUsuario} SET activo = ? WHERE id = ?`, [activo, id]);
@@ -184,10 +247,10 @@ const setActivoUsuario = async (req: Request, res: Response) => {
             });
         };
 
-    } catch (error) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
-            mensaje: error
+            mensaje: error.message
         });
     }
 }
