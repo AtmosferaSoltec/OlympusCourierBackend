@@ -5,29 +5,13 @@ import { pool } from '../db';
 
 const getAllClientes = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbCliente}`;
-        const [call]: any[] = await pool.query(query);
-
-        const calMap = await Promise.all(
-            call.map(async (cliente: any) => ({
-                id: cliente.id,
-                tipo_doc: cliente.tipo_doc,
-                documento: cliente.documento,
-                nombres: cliente.nombres,
-                telefono: cliente.telefono,
-                correo: cliente.correo,
-                genero: cliente.genero,
-                id_distrito: cliente.id_distrito,
-                distrito: await getDistritoById(cliente.id_distrito),
-                direc: cliente.direc,
-                referencia: cliente.referencia,
-                url_maps: cliente.url_maps
-            }))
-        );
-
+        const query = `CALL getAllClientes()`;
+        const [[call]]: any = await pool.query(query);
+        console.log(call);
+        
         res.json({
             isSuccess: true,
-            data: calMap
+            data: call
         });
     } catch (error: any) {
         res.json({
@@ -122,27 +106,35 @@ const insertCliente = async (req: Request, res: Response) => {
                 mensaje: 'Faltan parámetros obligatorios'
             });
         }
-        
+
+        //
+        if (cod_tipodoc !== '6' && cod_tipodoc !== '1' && cod_tipodoc !== '4' && cod_tipodoc !== '7' && cod_tipodoc !== '-') {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El codTipoDoc debe ser 1, 6, 4, 7 o -'
+            });
+        }
+
         //Validar el codTipoDoc si es correcto, si es RUC o DNI
-        if(cod_tipodoc == '6' && documento.length !== 11){
+        if (cod_tipodoc == '6' && documento.length !== 11) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El RUC debe tener 11 dígitos'
             });
         }
-        if(cod_tipodoc == '1' && documento.length !== 8){
+        if (cod_tipodoc == '1' && documento.length !== 8) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El DNI debe tener 8 dígitos'
             });
         }
-        if(cod_tipodoc == '4' && documento.length !== 12){
+        if (cod_tipodoc == '4' && documento.length !== 12) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El CARNET DE EXTRANJERÍA debe tener 12 dígitos'
             });
         }
-        if(cod_tipodoc == '7' && documento.length !== 12){
+        if (cod_tipodoc == '7' && documento.length !== 12) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El PASAPORTE debe tener 12 dígitos'
@@ -164,15 +156,6 @@ const insertCliente = async (req: Request, res: Response) => {
             return res.json({
                 isSuccess: false,
                 mensaje: `El telefono ${telefono} ya existe`
-            });
-        }
-
-        //Verificar si correo ya existe
-        const [verificarCorreo]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE correo = ?`, [correo]);
-        if (verificarCorreo[0].count > 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: `El correo ${correo} ya existe`
             });
         }
 
@@ -223,7 +206,7 @@ const updateCliente = async (req: Request, res: Response) => {
 
         //Verificar si documento ya existe
         const [verificarDocumento]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE documento = ?`, [documento]);
-        if (verificarDocumento[0].count > 0) {
+        if (verificarDocumento[0].count > 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: `El documento ${documento} ya existe`
@@ -232,42 +215,33 @@ const updateCliente = async (req: Request, res: Response) => {
 
         //Verificar si telefono ya existe
         const [verificarTelefono]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE telefono = ?`, [telefono]);
-        if (verificarTelefono[0].count > 0) {
+        if (verificarTelefono[0].count > 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: `El telefono ${telefono} ya existe`
             });
         }
 
-        //Verificar si correo ya existe
-        const [verificarCorreo]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE correo = ?`, [correo]);
-        if (verificarCorreo[0].count > 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: `El correo ${correo} ya existe`
-            });
-        }
-
         //Validar el codTipoDoc si es correcto, si es RUC o DNI
-        if(cod_tipodoc == '6' && documento.length !== 11){
+        if (cod_tipodoc == '6' && documento.length !== 11) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El RUC debe tener 11 dígitos'
             });
         }
-        if(cod_tipodoc == '1' && documento.length !== 8){
+        if (cod_tipodoc == '1' && documento.length !== 8) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El DNI debe tener 8 dígitos'
             });
         }
-        if(cod_tipodoc == '4' && documento.length !== 12){
+        if (cod_tipodoc == '4' && documento.length !== 12) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El CARNET DE EXTRANJERÍA debe tener 12 dígitos'
             });
         }
-        if(cod_tipodoc == '7' && documento.length !== 12){
+        if (cod_tipodoc == '7' && documento.length !== 12) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El PASAPORTE debe tener 12 dígitos'
@@ -301,14 +275,14 @@ const setActivoCliente = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
         const { activo } = req.body;
-    
+
         if (!activo) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Se requiere del activo'
             })
         }
-    
+
         //Verificar si existe el cliente
         const [verificarCliente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE id = ?`, [id]);
         if (verificarCliente[0].count === 0) {
@@ -317,9 +291,9 @@ const setActivoCliente = async (req: Request, res: Response) => {
                 mensaje: `No existe el cliente con el ID: ${id}`
             });
         }
-    
+
         const [updateResult]: any[] = await pool.query(`UPDATE ${tbCliente} SET activo = ? WHERE id = ?`, [activo, id]);
-    
+
         if (updateResult.affectedRows === 1) {
             res.json({
                 isSuccess: true,
@@ -331,7 +305,7 @@ const setActivoCliente = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo actualizar cliente'
             });
         };
-        
+
     } catch (error: any) {
         return res.json({
             isSuccess: false,

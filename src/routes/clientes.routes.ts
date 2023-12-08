@@ -10,7 +10,7 @@ const router = Router();
 
 router.get('/', clienteControllers.getAllClientes);
 
-router.get('/get/:id', clienteControllers.getCliente);
+router.get('/:id', clienteControllers.getCliente);
 
 router.get('/search/:datos', clienteControllers.searchCliente)
 

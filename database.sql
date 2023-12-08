@@ -62,7 +62,7 @@ CREATE TABLE cliente (
   documento VARCHAR(20) UNIQUE NOT NULL,
   nombres VARCHAR(255) NOT NULL,
   telefono VARCHAR(15) UNIQUE NOT NULL,
-  correo VARCHAR(255) UNIQUE,
+  correo VARCHAR(255),
   genero CHAR(1) DEFAULT 'S',
   id_distrito INT DEFAULT 1,
   direc VARCHAR(255) NOT NULL,

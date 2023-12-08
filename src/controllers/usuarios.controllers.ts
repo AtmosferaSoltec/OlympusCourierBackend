@@ -159,9 +159,11 @@ const updateUsuario = async (req: Request, res: Response) => {
             });
         }
 
+        console.log(req.body);
+        
         // Validar si el documento ya existe
-        const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ?`, [documento]);
-        if (documentoExistente[0].count > 0) {
+        const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ?`, [documento, id]);
+        if (documentoExistente[0].count > 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El documento ya existe en otro usuario'
@@ -170,7 +172,7 @@ const updateUsuario = async (req: Request, res: Response) => {
 
         //Validar si el telefono ya existe
         const [telefonoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE telefono = ?`, [telefono]);
-        if (telefonoExistente[0].count > 0) {
+        if (telefonoExistente[0].count > 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El telefono ya existe en otro usuario'
@@ -179,7 +181,7 @@ const updateUsuario = async (req: Request, res: Response) => {
 
         //Validar si el correo ya existe
         const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ?`, [correo]);
-        if (correoExistente[0].count > 0) {
+        if (correoExistente[0].count > 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El correo ya existe en otro usuario'
