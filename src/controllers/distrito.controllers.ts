@@ -4,13 +4,31 @@ import { tbDistrito } from '../func/tablas';
 
 const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbDistrito}`;
-        const [call] : any[] = await pool.query(query);
+        const { estado } = req.query;
+        let query = `SELECT * FROM ${tbDistrito}`;
+        switch (estado?.toString().toUpperCase()) {
+            case 'S':
+                query += " WHERE activo = 'S'";
+                break;
+            case 'N':
+                query += " WHERE activo = 'N'";
+                break;
+            case 'T': break;
+            default: {
+                res.json({
+                    isSuccess: false,
+                    mensaje: 'El estado no es válido'
+                })
+                return;
+            }
+        }
+
+        const [call]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: call
         });
-    } catch (error:any) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
             mensaje: error.message,
@@ -34,7 +52,7 @@ const getDistrito = async (req: Request, res: Response) => {
             isSuccess: true,
             data: call[0]
         });
-    } catch (error:any) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
             mensaje: error.message
@@ -66,7 +84,7 @@ const insertDistrito = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo insertar el distrito'
             });
         }
-    } catch (error:any) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
             mensaje: error.message
@@ -109,7 +127,7 @@ const updateDistrito = async (req: Request, res: Response) => {
                 mensaje: 'No se encontró el distrito para actualizar'
             });
         }
-    } catch (error:any) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
             mensaje: error.message
@@ -122,9 +140,9 @@ const setActivoDistrito = async (req: Request, res: Response) => {
         const id = req.params.id;
         const { activo } = req.body;
 
-        if(!activo){
+        if (!activo) {
             return res.json({
-                isSuccess:false,
+                isSuccess: false,
                 mensaje: 'Se requiere del activo'
             })
         }
@@ -139,7 +157,7 @@ const setActivoDistrito = async (req: Request, res: Response) => {
         }
 
         //Actualizar el activo
-        const [updateResult]: any[] = await pool.query(`UPDATE ${tbDistrito} SET activo = ? WHERE id = ?`, [activo,id]);
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tbDistrito} SET activo = ? WHERE id = ?`, [activo, id]);
 
         if (updateResult.affectedRows === 1) {
             res.json({
@@ -153,7 +171,7 @@ const setActivoDistrito = async (req: Request, res: Response) => {
             });
         };
 
-    } catch (error:any) {
+    } catch (error: any) {
         res.json({
             isSuccess: false,
             mensaje: error.message

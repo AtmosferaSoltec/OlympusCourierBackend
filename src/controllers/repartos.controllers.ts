@@ -35,8 +35,28 @@ import { tbItemReparto, tbReparto } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
-        const queryRepartos = `SELECT * FROM ${tbReparto} WHERE activo = 'S'`;
-        const [repartos]: any[] = await pool.query(queryRepartos);
+
+        const { estado } = req.query;
+        let query = `SELECT * FROM ${tbReparto}`;
+        switch (estado?.toString().toUpperCase()) {
+            case 'S':
+                query += " WHERE activo = 'S'";
+                break;
+            case 'N':
+                query += " WHERE activo = 'N'";
+                break;
+            case 'T': break;
+            default: {
+                res.json({
+                    isSuccess: false,
+                    mensaje: 'El estado no es válido'
+                })
+                return;
+            }
+        }
+
+
+        const [repartos]: any[] = await pool.query(query);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
                 return {
@@ -170,7 +190,7 @@ const insertReparto = async (req: Request, res: Response) => {
             isSuccess: true,
             mensaje: 'Insertado correctamente'
         });
-    } catch (err:any) {
+    } catch (err: any) {
         res.json({
             isSuccess: false,
             mensaje: err.message || 'Error desconocido'

@@ -37,12 +37,24 @@ const login = async (req: Request, res: Response) => {
 
 const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const estado = req.query.estado;
-        let query = `SELECT * FROM ${tbUsuario} `;
-        if (estado === 'S') {
-            query += "WHERE activo = 'S'";
-        } else if (estado === 'N') {
-            query += "WHERE activo = 'N'";
+
+        const { estado } = req.query;
+        let query = `SELECT * FROM ${tbUsuario}`;
+        switch (estado?.toString().toUpperCase()) {
+            case 'S':
+                query += " WHERE activo = 'S'";
+                break;
+            case 'N':
+                query += " WHERE activo = 'N'";
+                break;
+            case 'T': break;
+            default: {
+                res.json({
+                    isSuccess: false,
+                    mensaje: 'El estado no es válido'
+                })
+                return;
+            }
         }
 
         const [destinos]: any[] = await pool.query(query);
@@ -50,7 +62,7 @@ const getAllUsuarios = async (req: Request, res: Response) => {
             isSuccess: true,
             data: destinos
         });
-    } catch (error:any) {
+    } catch (error: any) {
         res.json({
             isSuccess: true,
             mensaje: error.message
