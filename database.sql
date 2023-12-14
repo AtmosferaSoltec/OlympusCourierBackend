@@ -9,6 +9,19 @@ CREATE TABLE distrito (
   activo CHAR(1) DEFAULT 'S'
 );
 
+CREATE TABLE metodo_pago (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(50),
+  fecha_creacion TIMESTAMP DEFAULT now(),
+  activo CHAR(1) DEFAULT 'S'
+);
+
+INSERT INTO
+metodo_pago (nombre)
+VALUES
+	('Efectivo'),
+    ('Yape');
+
 INSERT INTO
   distrito (nombre)
 VALUES
@@ -202,17 +215,28 @@ VALUES
 
 CREATE TABLE comprobante (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  id_cliente INT NOT NULL,
-  id_usuario INT NOT NULL,
-  tipo_de_comprobante INT,
+  id_reparto INT,
+  tipo_comprobante INT,
   serie VARCHAR(5),
-  numero INT,
-  enlace VARCHAR(255) DEFAULT '',
-  url_pdf VARCHAR(255) DEFAULT '',
-  url_xml VARCHAR(255) DEFAULT '',
+  num_serie INT,
+  id_metodo_pago INT,
+  num_operacion VARCHAR(255),
+  foto_operacion VARCHAR(500),
+  tipo_doc CHAR(1),
+  documento VARCHAR(15),
+  nombre VARCHAR(100),
+  direc VARCHAR(255),
+  correo VARCHAR(255),
+  telefono VARCHAR(255),
+  enlace VARCHAR(500),
+  url_pdf VARCHAR(500),
+  url_xml VARCHAR(500),
+  url_cdr VARCHAR(500),
+  id_usuario INT,
   fecha_creacion TIMESTAMP DEFAULT now(),
   activo CHAR(1) DEFAULT 'S',
-  FOREIGN KEY (id_cliente) REFERENCES cliente(id),
+  FOREIGN KEY (id_reparto) REFERENCES reparto(id),
+  FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id)
 );
 
@@ -226,27 +250,35 @@ CREATE TABLE reparto (
   id_cliente INT NOT NULL,
   id_usuario INT NOT NULL,
   id_repartidor INT,
-  id_comprobante INT,
   url_foto VARCHAR(500),
   total DECIMAL(10, 2),
   activo CHAR(1) DEFAULT 'S',
   FOREIGN KEY (id_cliente) REFERENCES cliente(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id),
-  FOREIGN KEY (id_repartidor) REFERENCES usuario(id),
-  FOREIGN KEY (id_comprobante) REFERENCES comprobante(id)
+  FOREIGN KEY (id_repartidor) REFERENCES usuario(id)
 );
 
 CREATE TABLE item_reparto (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  num_guia VARCHAR(255) DEFAULT '',
-  detalle VARCHAR(255) DEFAULT '',
-  cant INT DEFAULT 0,
-  precio DECIMAL(10, 2) DEFAULT 0.0,
+  num_guia VARCHAR(15),
+  detalle VARCHAR(255),
+  cant INT,
+  precio DECIMAL(10, 2),
   id_reparto INT NOT NULL,
   id_tipo_paquete INT NOT NULL,
   activo CHAR(1) DEFAULT 'S',
+  fecha_creacion TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (id_reparto) REFERENCES reparto(id),
   FOREIGN KEY (id_tipo_paquete) REFERENCES tipo_paquete(id)
+);
+
+CREATE TABLE contador(
+	id INT auto_increment primary key,
+    ruc VARCHAR(11),
+    serie_f CHAR(4),
+    num_f INT,
+    serie_b CHAR(4),
+    num_b INT
 );
 
 CREATE TABLE auditoria (
@@ -264,11 +296,15 @@ CREATE TABLE auditoria (
   FOREIGN KEY (id_user) REFERENCES usuario(id)
 );
 
+CALL getAllItemsReparto(1);
+
 /**Resetear valores de una tabla*/
 SET
   foreign_key_checks = 0;
 
 TRUNCATE TABLE usuario;
+
+CALL subirContador(1, 3);
 
 ALTER TABLE
   usuario AUTO_INCREMENT = 1;

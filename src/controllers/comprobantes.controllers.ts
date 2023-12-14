@@ -1,81 +1,191 @@
-import { Request, Response } from 'express';
+import e, { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
-import { tbComprobante } from '../func/tablas';
+import { tbComprobante, tbItemReparto, tbMetodoPago, tbReparto, tbTipoDoc, tbTipoPaquete, tbUsuario } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-        const query = 'SELECT * FROM comprobantes';
-        const destinos: any[] = await pool.query(query);
-        res.json(destinos);
+        const query = `SELECT * FROM ${tbComprobante}`;
+        const [destinos]: any[] = await pool.query(query);
+        res.json({
+            isSuccess: true,
+            data: destinos
+        });
     } catch (error) {
         console.error('Error al recuperar datos de la tabla Comprobantes:', error);
-        res.status(500).json({ error: 'Ocurrió un error al obtener los datos de la tabla Comprobantes' });
+        res.json({
+            isSuccess: false,
+            mensaje: 'Error al recuperar datos de la tabla Comprobantes'
+        })
+    }
+};
+
+const get = async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+
+        //Verificar que el reparto exista
+        const [verificarComprobante]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbComprobante} WHERE id_reparto = ? LIMIT 1`, [id]);
+
+        if (verificarComprobante[0].count === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El comprobante no existe'
+            });
+            return;
+        }
+
+        const query = `SELECT * FROM ${tbComprobante} WHERE id_reparto = ? LIMIT 1;`;
+        const [comprobante]: any[] = await pool.query(query, [id]);
+        res.json({
+            isSuccess: true,
+            data: comprobante[0]
+        });
+    } catch (error) {
+        res.json({
+            isSuccess: false,
+            mensaje: 'Error al recuperar datos de la tabla Comprobantes'
+        })
     }
 };
 
 
 const insertar = async (req: Request, res: Response) => {
     try {
-        const { tipoComprobante, tipoDoc, documento, nombre, direc, correo, items, idReparto } = req.body;
-        if (!Array.isArray(items)) {
-            console.error('El campo "items" no es una lista.');
-            res.status(400).json({ error: 'El campo "items" debe ser una lista.' });
+        const {
+            id_reparto, tipo_comprobante, serie, num_serie,
+            id_metodo_pago, num_operacion, foto_operacion,
+            tipo_doc, documento, nombre, direc, correo, telefono,
+            id_usuario } = req.body;
+
+        // Validar que todos los campos requeridos estén presentes
+        if (!id_reparto || !tipo_comprobante || !serie || !num_serie || !id_metodo_pago || !tipo_doc || !documento || !nombre || !direc || !id_usuario) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'Se requieren todos los campos'
+            });
             return;
         }
 
+        //Verificar que el reparto exista
+        const [verificarReparto]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbReparto} WHERE id = ?`, [id_reparto]);
+        if (verificarReparto[0].count === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El reparto no existe'
+            });
+            return;
+        }
+
+        //Verificar que el tipo de comprobante sea 1 o 2
+        if (tipo_comprobante !== 1 && tipo_comprobante !== 2) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El tipo de comprobante debe ser 1 o 2'
+            });
+            return;
+        }
+
+        //Verificar que la serie tenga 4 caracteres
+        if (serie.length !== 4) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'La serie debe tener 4 caracteres'
+            });
+            return;
+        }
+
+        //Verificar que el metodo de pago exista
+        const [verificarMetodoPago]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbMetodoPago} WHERE id = ?`, [id_metodo_pago]);
+        if (verificarMetodoPago[0].count === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El metodo de pago no existe'
+            });
+            return;
+        }
+
+        //Verificar que el tipo de documento sea 1 o 6
+        if (tipo_doc !== 1 && tipo_doc !== 6) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El tipo de documento debe ser 1 o 6'
+            });
+            return;
+        }
+
+        //Verificar que el id_usuario exista
+        const [verificarUsuario]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbUsuario} WHERE id = ?`, [id_usuario]);
+        if (verificarUsuario[0].count === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El usuario no existe'
+            });
+            return;
+        }
+
+        //Traer Lista de Items del Reparto con tipo de paquete
+        const [[items]]: any = await pool.query(`CALL getAllItemsReparto(?);`, [id_reparto]);
         if (items.length == 0) {
-            res.status(404).json({ error: 'Minimo debe haber un item' });
+            res.json({
+                isSuccess: false,
+                mensaje: 'Debe haber al menos un item'
+            });
             return;
         }
 
         const itemsNubefact: any[] = []
 
-        items.forEach(item => {
-            const precioUn = item.precio / 1.18
-            const igv = item.precio - precioUn;
-            itemsNubefact.push(
-                {
-                    "unidad_de_medida": "ZZ",
-                    "codigo": item.id,
-                    "codigo_producto_sunat": "",
-                    "descripcion": `SERVICIO REPARTO A DOMICILIO DE ${item.cant} Cajas`,
-                    "cantidad": 1,
-                    "valor_unitario": precioUn,
-                    "precio_unitario": item.precio,
-                    "descuento": "",
-                    "subtotal": precioUn,
-                    "tipo_de_igv": 1,
-                    "igv": igv,
-                    "total": item.precio,
-                    "anticipo_regularizacion": false,
-                    "anticipo_documento_serie": "",
-                    "anticipo_documento_numero": ""
-                })
+        items.forEach((item: any) => {
+            let precioUn = item.precio / 1.18;
+            precioUn = +(precioUn.toFixed(4)); // limita a 4 decimales
+
+            let igv = item.precio - precioUn;
+            igv = +(igv.toFixed(4)); // limita a 4 decimales
+
+            itemsNubefact.push({
+                "unidad_de_medida": "ZZ",
+                "codigo": item.id,
+                "codigo_producto_sunat": "",
+                "descripcion": `Servicio de transporte de ${item.cant} (${item.tipo_paquete})`,
+                "cantidad": 1,
+                "valor_unitario": precioUn,
+                "precio_unitario": item.precio,
+                "descuento": "",
+                "subtotal": precioUn,
+                "tipo_de_igv": 1,
+                "igv": igv,
+                "total": item.precio,
+                "anticipo_regularizacion": false,
+                "anticipo_documento_serie": "",
+                "anticipo_documento_numero": ""
+            })
         });
+        let total = itemsNubefact.reduce((total, currentItem) => total + Number(currentItem.total), 0);
+        total = +(total.toFixed(4)); // limita a 4 decimales
 
-        const total = itemsNubefact.reduce((total, currentItem) => total + currentItem.total, 0);
-        const montoBase = total / 1.18
-        const mongoIgv = total - montoBase;
+        let montoBase = total / 1.18;
+        montoBase = +(montoBase.toFixed(4)); // limita a 4 decimales
 
-        let serie = '';
+        let mongoIgv = total - montoBase;
+        mongoIgv = +(mongoIgv.toFixed(4));
 
-        if (tipoComprobante == 1) {
-            serie = 'FFF1';
-        } else if (tipoComprobante == 2) {
-            serie = 'BBB1'
+        if (+(montoBase + mongoIgv).toFixed(4) !== total) {
+            console.log('La suma de montoBase e igv no es igual a total');
         }
-        const query = 'SELECT IFNULL(MAX(numero) + 1, 1) AS numero FROM comprobantes WHERE tipo_comprobante = ?'
-        const [numero]: any[] = await pool.query(query, [tipoComprobante]);
-        const url = 'https://api.pse.pe/api/v1/6baf3f2f6c284defa9cf148782cdb136f19c6f2ec1b84e8eb9f4144f67df2145'
-        const token = 'eyJhbGciOiJIUzI1NiJ9.ImMzYTljNmI5YWJlZTQ0ZDFiMjExZmRlMzIxNTE1ZDRhM2VkODFlMDQ1OTkyNDMyZDk3NTI2NjVjMDY2NDEzZGUi.oRgBsVpXqZlgJ1OPBQd0TpLEyeFrtWppa2vE92GjYA0'
+
+        const rutaAdriel = 'https://api.pse.pe/api/v1/81b5890bad754f068945f23f4aebb50ff7b4608c45a84ed4b163b2d5686d1b24'
+        const tokenAdriel = 'eyJhbGciOiJIUzI1NiJ9.Ijg3YjNjZTVkNjExMDQ0YTNhNmNlMzg4Y2JmNDkxZjJkZjVlNWY3OTJhNWMyNDhlNmEzOGIxNmY3NWViMjhkNDki.r61HxQLee6TWu0K6gCDV7QqcQ0D3jCQTuQ0nGxR6eXQ'
+        const rutaOlympus = 'https://api.pse.pe/api/v1/6baf3f2f6c284defa9cf148782cdb136f19c6f2ec1b84e8eb9f4144f67df2145'
+        const tokenOlympus = 'eyJhbGciOiJIUzI1NiJ9.ImMzYTljNmI5YWJlZTQ0ZDFiMjExZmRlMzIxNTE1ZDRhM2VkODFlMDQ1OTkyNDMyZDk3NTI2NjVjMDY2NDEzZGUi.oRgBsVpXqZlgJ1OPBQd0TpLEyeFrtWppa2vE92GjYA0'
+
         const data = {
             "operacion": "generar_comprobante",
-            "tipo_de_comprobante": tipoComprobante,
+            "tipo_de_comprobante": tipo_comprobante,
             "serie": serie,
-            "numero": numero,
+            "numero": num_serie,
             "sunat_transaction": 1,
-            "cliente_tipo_de_documento": tipoDoc,
+            "cliente_tipo_de_documento": tipo_doc,
             "cliente_numero_de_documento": documento,
             "cliente_denominacion": nombre,
             "cliente_direccion": direc,
@@ -127,29 +237,51 @@ const insertar = async (req: Request, res: Response) => {
             "venta_al_credito": []
         }
 
-        const headers = {
-            'Authorization': token,
-            'Content-Type': 'application/json',
-        };
-
-
-        const call = await axios.post(url, data, { headers });
-        if (call.data) {
-            const { tipo_de_comprobante, serie, numero, enlace, enlace_del_pdf, enlace_del_xml } = call.data;
-
-            const query = 'INSERT INTO comprobantes (tipo_comprobante,serie,numero,enlace,enlace_pdf,enlace_xml,id_reparto) VALUES (?,?,?,?,?,?,?)'
-            const [result]: any[] = await pool.query(query, [tipo_de_comprobante, serie, numero, enlace, enlace_del_pdf, enlace_del_xml, idReparto]);
-            if (result.affectedRows === 1) {
-                res.json({ message: 'Comprobante insertado correctamente' });
-            } else {
-                res.status(500).json({ error: 'No se pudo insertar el destino' });
+        const call = await axios.post(
+            rutaAdriel,
+            data,
+            {
+                headers: {
+                    'Authorization': tokenAdriel,
+                    'Content-Type': 'application/json',
+                }
             }
-        } else {
-            res.json({ error: 'Error al generar comprobante' })
+        )
+
+        if (call.status !== 200) {
+            res.json({
+                isSuccess: false,
+                mensaje: call.data?.errors
+            });
+            return;
         }
+
+        const { enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr } = call.data;
+        const query = `INSERT INTO ${tbComprobante} (id_reparto, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        const [result]: any[] = await pool.query(query, [id_reparto, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
+
+        //Subir Contador
+        const [resContador]: any[] = await pool.query(`CALL subirContador(?,?)`, [tipo_comprobante, num_serie])
+        console.log(resContador);
+
+        if (result.affectedRows === 1 && resContador.affectedRows === 1) {
+            res.json({
+                isSuccess: true,
+                mensaje: 'Comprobante insertado correctamente'
+            });
+        } else {
+            res.json({
+                isSuccess: false,
+                mensaje: 'Error al insertar comprobante'
+            })
+        }
+
     } catch (error: any) {
-        if (error.response) {
-            res.json(error.response.data);
+        if (error.response && error.response.status === 400) {
+            const mensajeError = error.response.data?.errors ?? "Error al insertar comprobante";
+            res.json({ isSuccess: false, mensaje: mensajeError });
+        } else {
+            res.json({ isSuccess: false, mensaje: error.message });
         }
     }
 
@@ -204,6 +336,7 @@ const setActivoComprobante = async (req: Request, res: Response) => {
 
 export default {
     listarTodos,
+    get,
     insertar,
     actualizar,
     setActivoComprobante

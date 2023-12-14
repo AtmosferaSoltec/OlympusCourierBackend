@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import contadorController from '../controllers/contador.controllers';
+
+const router = Router();
+
+router.get('/', contadorController.get);
+router.post('/', contadorController.insert);
+router.put('/:id', contadorController.update);
+
+export { router };

@@ -7,8 +7,6 @@ const getAllClientes = async (req: Request, res: Response) => {
     try {
         const query = `CALL getAllClientes()`;
         const [[call]]: any = await pool.query(query);
-        console.log(call);
-        
         res.json({
             isSuccess: true,
             data: call

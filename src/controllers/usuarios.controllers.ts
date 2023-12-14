@@ -27,7 +27,7 @@ const login = async (req: Request, res: Response) => {
                 mensaje: 'Credenciales incorrectas'
             });
         }
-    } catch (err:any) {
+    } catch (err: any) {
         res.json({
             isSuccess: false,
             mensaje: err.message
@@ -37,16 +37,23 @@ const login = async (req: Request, res: Response) => {
 
 const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbUsuario}`;
+        const estado = req.query.estado;
+        let query = `SELECT * FROM ${tbUsuario} `;
+        if (estado === 'S') {
+            query += "WHERE activo = 'S'";
+        } else if (estado === 'N') {
+            query += "WHERE activo = 'N'";
+        }
+
         const [destinos]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: destinos
         });
-    } catch (error) {
+    } catch (error:any) {
         res.json({
             isSuccess: true,
-            mensaje: error
+            mensaje: error.message
         });
     }
 };
@@ -63,7 +70,7 @@ const getUsuario = async (req: Request, res: Response) => {
                 mensaje: `No se encontró el ID: ${id}`
             });
         }
-        
+
         delete resultado[0].clave;
         res.json({
             isSuccess: true,
@@ -160,7 +167,7 @@ const updateUsuario = async (req: Request, res: Response) => {
         }
 
         console.log(req.body);
-        
+
         // Validar si el documento ya existe
         const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ?`, [documento, id]);
         if (documentoExistente[0].count > 1) {

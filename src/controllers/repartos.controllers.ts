@@ -35,7 +35,7 @@ import { tbItemReparto, tbReparto } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
-        const queryRepartos = `SELECT * FROM ${tbReparto}`;
+        const queryRepartos = `SELECT * FROM ${tbReparto} WHERE activo = 'S'`;
         const [repartos]: any[] = await pool.query(queryRepartos);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
@@ -170,10 +170,10 @@ const insertReparto = async (req: Request, res: Response) => {
             isSuccess: true,
             mensaje: 'Insertado correctamente'
         });
-    } catch (err) {
+    } catch (err:any) {
         res.json({
             isSuccess: false,
-            mensaje: err || 'Error desconocido'
+            mensaje: err.message || 'Error desconocido'
         });
     }
 };
