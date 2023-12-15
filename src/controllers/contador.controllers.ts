@@ -2,15 +2,32 @@ import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbDistrito, tb_contador } from '../func/tablas';
 
-
 const get = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tb_contador} WHERE id = ? LIMIT 1`;
-        const [call]: any[] = await pool.query(query, [1]);
+        const { ruc } = req.query;
+
+        if (!ruc) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Es necesario un RUC'
+            })
+        }
+
+        //Verificar si el RUC existe
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tb_contador} WHERE ruc = ?`, [ruc]);
+        if (verificar[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'RUC no encontrado'
+            });
+        }
+
+        const query = `SELECT * FROM ${tb_contador} WHERE ruc = ? LIMIT 1`;
+        const [call]: any[] = await pool.query(query, [ruc]);
         if (call.length === 0) {
             return res.json({
                 isSuccess: false,
-                mensaje: `No se encontró el ID ${1}`
+                mensaje: `No se encontró el ID ${ruc}`
             });
         }
 
@@ -28,9 +45,9 @@ const get = async (req: Request, res: Response) => {
 
 const insert = async (req: Request, res: Response) => {
     try {
-        const { ruc, serie_f, num_f, serie_b, num_b } = req.body;
+        const { ruc, ruta, token, razon_social, serie_f, num_f, serie_b, num_b } = req.body;
 
-        if (!ruc || !serie_f || !num_f || !serie_b || !num_b) {
+        if (!ruc || !serie_f || !num_f || !serie_b || !num_b || !ruta || !token || !razon_social) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Faltan campos requeridos, por favor verifique.'
@@ -46,8 +63,8 @@ const insert = async (req: Request, res: Response) => {
             });
         }
 
-        const query = `INSERT INTO ${tb_contador} (ruc, serie_f, num_f, serie_b, num_b) VALUES (?,?,?,?,?)`;
-        const [result]: any[] = await pool.query(query, [ruc, serie_f, num_f, serie_b, num_b]);
+        const query = `INSERT INTO ${tb_contador} (ruc, serie_f, num_f, serie_b, num_b, ruta, token, razon_social) VALUES (?,?,?,?,?,?,?,?)`;
+        const [result]: any[] = await pool.query(query, [ruc, serie_f, num_f, serie_b, num_b, ruta, token, razon_social]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -71,18 +88,18 @@ const insert = async (req: Request, res: Response) => {
 
 const update = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
-        const { ruc, serie_f, num_f, serie_b, num_b } = req.body;
+        const { ruc } = req.query;
+        const { ruta, token, razon_social, serie_f, num_f, serie_b, num_b } = req.body;
 
-        if (!ruc || !serie_f || !num_f || !serie_b || !num_b) {
+        if (!ruc || !serie_f || !num_f || !serie_b || !num_b || !ruta || !token || !razon_social) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Faltan campos requeridos, por favor verifique.'
             });
         }
 
-        //Verificar si el ID existe
-        const [verificarID]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tb_contador} WHERE id = ?`, [id]);
+        //Verificar si el RUC existe
+        const [verificarID]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tb_contador} WHERE ruc = ?`, [ruc]);
         if (verificarID[0].count === 0) {
             return res.json({
                 isSuccess: false,
@@ -90,17 +107,8 @@ const update = async (req: Request, res: Response) => {
             });
         }
 
-        //Verificar si el ruc existe
-        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tb_contador} WHERE id = ?`, [id]);
-        if (verificar[0].count > 1) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'RUC ya existe'
-            });
-        }
-
-        const query = `UPDATE ${tb_contador} SET ruc = ?, serie_f = ?, num_f = ?, serie_b = ?, num_b = ? WHERE id = ?`;
-        const [result]: any[] = await pool.query(query, [ruc, serie_f, num_f, serie_b, num_b, id]);
+        const query = `UPDATE ${tb_contador} SET ruta = ?, token = ?, razon_social = ?, serie_f = ?, num_f = ?, serie_b = ?, num_b = ? WHERE ruc = ?`;
+        const [result]: any[] = await pool.query(query, [ruta, token, razon_social, serie_f, num_f, serie_b, num_b, ruc]);
 
         if (result.affectedRows === 1) {
             res.json({

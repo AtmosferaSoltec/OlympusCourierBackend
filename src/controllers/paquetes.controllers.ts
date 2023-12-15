@@ -125,6 +125,15 @@ const updatePaquete = async (req: Request, res: Response) => {
                 mensaje: `El paquete con ID: ${id} no existe`
             });
         }
+        
+        //Verificamos si el nombre ya existe
+        const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbTipoPaquete} WHERE nombre = ? AND id != ?`, [nombre, id]);
+        if (nombreExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El nombre ya existe'
+            });
+        }
 
         //Actualizar el Paquete
         const query = `UPDATE ${tbTipoPaquete} SET nombre = ? WHERE id = ?`;

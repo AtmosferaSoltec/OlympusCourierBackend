@@ -2,75 +2,59 @@ CREATE DATABASE olympus_courier;
 
 USE olympus_courier;
 
+CREATE TABLE empresa (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ruc CHAR(11),
+  razon_social VARCHAR(100)
+);
+
 CREATE TABLE distrito (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
   nombre VARCHAR(50),
   fecha_creacion TIMESTAMP DEFAULT now(),
-  activo CHAR(1) DEFAULT 'S'
+  activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
 CREATE TABLE metodo_pago (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
   nombre VARCHAR(50),
   fecha_creacion TIMESTAMP DEFAULT now(),
-  activo CHAR(1) DEFAULT 'S'
+  activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
-
-INSERT INTO
-metodo_pago (nombre)
-VALUES
-	('Efectivo'),
-    ('Yape');
-
-INSERT INTO
-  distrito (nombre)
-VALUES
-  ('Chincha Alta'),
-  ('Chincha Baja'),
-  ('Pueblo Nuevo'),
-  ('Tambo de Mora'),
-  ('Sunampe'),
-  ('Grocio Prado'),
-  ('El Carmen'),
-  ('Alto Laran');
 
 CREATE TABLE tipo_paquete (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
   nombre VARCHAR(50),
   fecha_creacion TIMESTAMP DEFAULT now(),
-  activo CHAR(1) DEFAULT 'S'
+  activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
-
-INSERT INTO
-  tipo_paquete (nombre)
-VALUES
-  ('Caja'),
-  ('Paquete'),
-  ('Paqueteria'),
-  ('Sobre'),
-  ('Bulto'),
-  ('Otro');
 
 CREATE TABLE tipo_doc (
   id INT PRIMARY KEY AUTO_INCREMENT,
+  id_ruc INT,
   cod CHAR(1) UNIQUE,
   detalle VARCHAR(255),
   cant_caracteres INT,
   fecha_creacion TIMESTAMP DEFAULT now(),
-  activo CHAR(1) DEFAULT 'S'
+  activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
-INSERT INTO
-  tipo_doc (cod, detalle, cant_caracteres)
-VALUES
-  ('6', 'RUC', 11),
-  ('1', 'Documento', 8),
-  ('-', 'Varios', 255),
-  ('4', 'Carnet de Extranjeria', 12),
-  ('7', 'Pasaporte', 12);
+CREATE TABLE rol (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cod CHAR(1) UNIQUE,
+  nombre VARCHAR(50)
+);
 
 CREATE TABLE cliente (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
   cod_tipodoc CHAR(1),
   documento VARCHAR(20) UNIQUE NOT NULL,
   nombres VARCHAR(255) NOT NULL,
@@ -84,85 +68,13 @@ CREATE TABLE cliente (
   fecha_creacion TIMESTAMP DEFAULT now(),
   activo CHAR(1) DEFAULT 'S',
   FOREIGN KEY (cod_tipodoc) REFERENCES tipo_doc(cod),
-  FOREIGN KEY (id_distrito) REFERENCES distrito(id)
+  FOREIGN KEY (id_distrito) REFERENCES distrito(id),
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
-
-INSERT INTO
-  cliente (
-    cod_tipodoc,
-    documento,
-    nombres,
-    telefono,
-    genero,
-    id_distrito,
-    direc,
-    referencia,
-    url_maps
-  )
-VALUES
-  (
-    '1',
-    '25668735',
-    'Paquita Fernandez Lara',
-    '984334920',
-    'F',
-    1,
-    'Calle Pedro Moreno 102',
-    'Frente a Plaza de Armas',
-    ''
-  ),
-  (
-    '6',
-    '20492684679',
-    'Sistema y Soluciones',
-    '971842536',
-    'S',
-    3,
-    'Av. Enrique Torres Saldamando 146',
-    'Atras de Sunat',
-    'https://maps.app.goo.gl/7R8DX9e5gtWtka8q7'
-  ),
-  (
-    '1',
-    '25666175',
-    'Juan Carlos Maldonado Reynaga',
-    '949071783',
-    'S',
-    2,
-    'Prol. Luis Massaro 118',
-    'Atras de Plaza vea',
-    ''
-  ),
-  (
-    '1',
-    '25707522',
-    'Richard Tataje Maldonado',
-    '931245632',
-    'M',
-    4,
-    'Av. Las Palmeras 12',
-    'Atras de Plaza Norte',
-    ''
-  );
-
-CREATE TABLE rol (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  cod CHAR(1) UNIQUE,
-  nombre VARCHAR(50),
-  fecha_creacion TIMESTAMP DEFAULT now(),
-  activo CHAR(1) DEFAULT 'S'
-);
-
-INSERT INTO
-  rol (cod, nombre)
-VALUES
-  ('U', 'Usuario'),
-  ('A', 'Admin'),
-  ('S', 'SuperAdmin'),
-  ('D', 'Delivery');
 
 CREATE TABLE usuario (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
   documento VARCHAR(20) UNIQUE NOT NULL,
   nombres VARCHAR(255) NOT NULL,
   ape_paterno VARCHAR(255),
@@ -174,47 +86,47 @@ CREATE TABLE usuario (
   clave VARCHAR(255),
   cod_rol CHAR(1),
   activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id),
   FOREIGN KEY (cod_rol) REFERENCES rol(cod)
 );
 
-INSERT INTO
-  usuario (
-    documento,
-    nombres,
-    ape_paterno,
-    ape_materno,
-    telefono,
-    correo,
-    fecha_nac,
-    clave,
-    cod_rol
-  )
-VALUES
-  (
-    '74866419',
-    'Hector Adriel',
-    'Albino',
-    'Tasayco',
-    '955003641',
-    'adrilito@gmail.com',
-    '1997-11-02',
-    '1234',
-    'A'
-  ),
-  (
-    '74455518',
-    'Joel',
-    'Maldonado',
-    'Fernandez',
-    '936416623',
-    'joelmaldonadodev@gmail.com',
-    '1999-10-11',
-    '1234',
-    'S'
-  );
+CREATE TABLE reparto (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
+  anotacion VARCHAR(255) DEFAULT '',
+  clave VARCHAR(255) DEFAULT '',
+  estado CHAR(1) DEFAULT 'P',
+  fecha_creacion TIMESTAMP DEFAULT NOW(),
+  fecha_entrega TIMESTAMP,
+  id_cliente INT NOT NULL,
+  id_usuario INT NOT NULL,
+  id_repartidor INT,
+  url_foto VARCHAR(500),
+  total DECIMAL(10, 2),
+  activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_cliente) REFERENCES cliente(id),
+  FOREIGN KEY (id_usuario) REFERENCES usuario(id),
+  FOREIGN KEY (id_repartidor) REFERENCES usuario(id),
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+);
+
+CREATE TABLE item_reparto (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  num_guia VARCHAR(15),
+  detalle VARCHAR(255),
+  cant INT,
+  precio DECIMAL(10, 2),
+  id_reparto INT NOT NULL,
+  id_tipo_paquete INT NOT NULL,
+  activo CHAR(1) DEFAULT 'S',
+  fecha_creacion TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (id_reparto) REFERENCES reparto(id),
+  FOREIGN KEY (id_tipo_paquete) REFERENCES tipo_paquete(id)
+);
 
 CREATE TABLE comprobante (
   id INT PRIMARY KEY AUTO_INCREMENT,
+  id_ruc INT,
   id_reparto INT,
   tipo_comprobante INT,
   serie VARCHAR(5),
@@ -237,52 +149,26 @@ CREATE TABLE comprobante (
   activo CHAR(1) DEFAULT 'S',
   FOREIGN KEY (id_reparto) REFERENCES reparto(id),
   FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id),
-  FOREIGN KEY (id_usuario) REFERENCES usuario(id)
-);
-
-CREATE TABLE reparto (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  anotacion VARCHAR(255) DEFAULT '',
-  clave VARCHAR(255) DEFAULT '',
-  estado CHAR(1) DEFAULT 'P',
-  fecha_creacion TIMESTAMP DEFAULT NOW(),
-  fecha_entrega TIMESTAMP,
-  id_cliente INT NOT NULL,
-  id_usuario INT NOT NULL,
-  id_repartidor INT,
-  url_foto VARCHAR(500),
-  total DECIMAL(10, 2),
-  activo CHAR(1) DEFAULT 'S',
-  FOREIGN KEY (id_cliente) REFERENCES cliente(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id),
-  FOREIGN KEY (id_repartidor) REFERENCES usuario(id)
-);
-
-CREATE TABLE item_reparto (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  num_guia VARCHAR(15),
-  detalle VARCHAR(255),
-  cant INT,
-  precio DECIMAL(10, 2),
-  id_reparto INT NOT NULL,
-  id_tipo_paquete INT NOT NULL,
-  activo CHAR(1) DEFAULT 'S',
-  fecha_creacion TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (id_reparto) REFERENCES reparto(id),
-  FOREIGN KEY (id_tipo_paquete) REFERENCES tipo_paquete(id)
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
 CREATE TABLE contador(
 	id INT auto_increment primary key,
-    ruc VARCHAR(11),
+    id_ruc INT,
+    razon_social VARCHAR(50),
+    ruta VARCHAR(255),
+    token VARCHAR(255),
     serie_f CHAR(4),
     num_f INT,
     serie_b CHAR(4),
-    num_b INT
+    num_b INT,
+	FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
 CREATE TABLE auditoria (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
   tabla VARCHAR(50),
   operacion VARCHAR(50),
   id_tabla INT,
@@ -293,9 +179,19 @@ CREATE TABLE auditoria (
   valor_new VARCHAR(255),
   pc VARCHAR(50),
   ip VARCHAR(50),
-  FOREIGN KEY (id_user) REFERENCES usuario(id)
+  FOREIGN KEY (id_user) REFERENCES usuario(id),
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
+
+INSERT INTO
+  rol (cod, nombre)
+VALUES
+  ('S', 'SuperAdmin'),
+  ('U', 'Usuario'),
+  ('A', 'Admin'),
+  ('D', 'Delivery');
+  
 CALL getAllItemsReparto(1);
 
 /**Resetear valores de una tabla*/

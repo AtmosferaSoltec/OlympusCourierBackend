@@ -113,6 +113,15 @@ const updateDistrito = async (req: Request, res: Response) => {
             });
         }
 
+        //Verificamos si el nombre ya existe
+        const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbDistrito} WHERE nombre = ? AND id != ?`, [nombre, id]);
+        if (nombreExistente[0].count > 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El nombre ya existe'
+            });
+        }
+
         const query = `UPDATE ${tbDistrito} SET nombre = ? WHERE id = ?`;
         const [result]: any[] = await pool.query(query, [nombre, id]);
 

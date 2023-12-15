@@ -1,11 +1,30 @@
 import e, { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
-import { tbComprobante, tbItemReparto, tbMetodoPago, tbReparto, tbTipoDoc, tbTipoPaquete, tbUsuario } from '../func/tablas';
+import { tbComprobante, tbItemReparto, tbMetodoPago, tbReparto, tbTipoDoc, tbTipoPaquete, tbUsuario, tb_contador } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM ${tbComprobante}`;
+        const { estado, metodoPago, tipoDoc, idUser } = req.query;
+        let query = `SELECT * FROM ${tbComprobante}`;
+
+        switch (estado?.toString().toUpperCase()) {
+            case 'S':
+                query += " WHERE activo = 'S'";
+                break;
+            case 'N':
+                query += " WHERE activo = 'N'";
+                break;
+            case 'T': break;
+            default: {
+                res.json({
+                    isSuccess: false,
+                    mensaje: 'El estado no es válido'
+                })
+                return;
+            }
+        }
+
         const [destinos]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
@@ -53,13 +72,13 @@ const get = async (req: Request, res: Response) => {
 const insertar = async (req: Request, res: Response) => {
     try {
         const {
-            id_reparto, tipo_comprobante, serie, num_serie,
+            id_reparto, tipo_comprobante,
             id_metodo_pago, num_operacion, foto_operacion,
             tipo_doc, documento, nombre, direc, correo, telefono,
-            id_usuario } = req.body;
+            id_usuario, ruc } = req.body;
 
         // Validar que todos los campos requeridos estén presentes
-        if (!id_reparto || !tipo_comprobante || !serie || !num_serie || !id_metodo_pago || !tipo_doc || !documento || !nombre || !direc || !id_usuario) {
+        if (!ruc || !id_reparto || !tipo_comprobante || !id_metodo_pago || !tipo_doc || !documento || !nombre || !direc || !id_usuario) {
             res.json({
                 isSuccess: false,
                 mensaje: 'Se requieren todos los campos'
@@ -82,15 +101,6 @@ const insertar = async (req: Request, res: Response) => {
             res.json({
                 isSuccess: false,
                 mensaje: 'El tipo de comprobante debe ser 1 o 2'
-            });
-            return;
-        }
-
-        //Verificar que la serie tenga 4 caracteres
-        if (serie.length !== 4) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'La serie debe tener 4 caracteres'
             });
             return;
         }
@@ -174,10 +184,33 @@ const insertar = async (req: Request, res: Response) => {
             console.log('La suma de montoBase e igv no es igual a total');
         }
 
-        const rutaAdriel = 'https://api.pse.pe/api/v1/81b5890bad754f068945f23f4aebb50ff7b4608c45a84ed4b163b2d5686d1b24'
-        const tokenAdriel = 'eyJhbGciOiJIUzI1NiJ9.Ijg3YjNjZTVkNjExMDQ0YTNhNmNlMzg4Y2JmNDkxZjJkZjVlNWY3OTJhNWMyNDhlNmEzOGIxNmY3NWViMjhkNDki.r61HxQLee6TWu0K6gCDV7QqcQ0D3jCQTuQ0nGxR6eXQ'
-        const rutaOlympus = 'https://api.pse.pe/api/v1/6baf3f2f6c284defa9cf148782cdb136f19c6f2ec1b84e8eb9f4144f67df2145'
-        const tokenOlympus = 'eyJhbGciOiJIUzI1NiJ9.ImMzYTljNmI5YWJlZTQ0ZDFiMjExZmRlMzIxNTE1ZDRhM2VkODFlMDQ1OTkyNDMyZDk3NTI2NjVjMDY2NDEzZGUi.oRgBsVpXqZlgJ1OPBQd0TpLEyeFrtWppa2vE92GjYA0'
+        //Obtener Credenciales
+        const [credenciales]: any[] = await pool.query(`SELECT * FROM ${tb_contador} WHERE ruc = ? LIMIT 1`, [ruc]);
+        if (credenciales.length === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se encontraron credenciales'
+            });
+            return;
+        }
+
+        const ruta = credenciales[0].ruta;
+        const token = credenciales[0].token;
+        let serie: string;
+        let num_serie: string;
+        if (tipo_comprobante === 1) {
+            serie = credenciales[0].serie_f;
+            num_serie = credenciales[0].num_f + 1;
+        } else if (tipo_comprobante === 2) {
+            serie = credenciales[0].serie_b;
+            num_serie = credenciales[0].num_b + 1;
+        } else {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El tipo de comprobante no es válido'
+            });
+            return;
+        }
 
         const data = {
             "operacion": "generar_comprobante",
@@ -238,11 +271,11 @@ const insertar = async (req: Request, res: Response) => {
         }
 
         const call = await axios.post(
-            rutaAdriel,
+            ruta,
             data,
             {
                 headers: {
-                    'Authorization': tokenAdriel,
+                    'Authorization': token,
                     'Content-Type': 'application/json',
                 }
             }
@@ -257,12 +290,11 @@ const insertar = async (req: Request, res: Response) => {
         }
 
         const { enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr } = call.data;
-        const query = `INSERT INTO ${tbComprobante} (id_reparto, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        const [result]: any[] = await pool.query(query, [id_reparto, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
+        const query = `INSERT INTO ${tbComprobante} (id_reparto, ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        const [result]: any[] = await pool.query(query, [id_reparto, ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
 
         //Subir Contador
         const [resContador]: any[] = await pool.query(`CALL subirContador(?,?)`, [tipo_comprobante, num_serie])
-        console.log(resContador);
 
         if (result.affectedRows === 1 && resContador.affectedRows === 1) {
             res.json({
