@@ -1,17 +1,35 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbDistrito } from '../func/tablas';
+import { tbDistrito, tbEmpresa } from '../func/tablas';
 
 const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const { estado } = req.query;
-        let query = `SELECT * FROM ${tbDistrito}`;
+        const { estado, id_ruc } = req.query;
+        //Verificar si el estado y el id_ruc son válidos
+        if (!estado || !id_ruc) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El campo estado y id_ruc son requeridos.'
+            });
+        }
+
+        //Verificar si la empresa existe
+        const [empresa]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresa[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+        }
+
+
+        let query = `SELECT * FROM ${tbDistrito} WHERE id_ruc = ?`;
         switch (estado?.toString().toUpperCase()) {
             case 'S':
-                query += " WHERE activo = 'S'";
+                query += " AND activo = 'S'";
                 break;
             case 'N':
-                query += " WHERE activo = 'N'";
+                query += " AND activo = 'N'";
                 break;
             case 'T': break;
             default: {
@@ -23,7 +41,7 @@ const getAllDistritos = async (req: Request, res: Response) => {
             }
         }
 
-        const [call]: any[] = await pool.query(query);
+        const [call]: any[] = await pool.query(query, id_ruc);
         res.json({
             isSuccess: true,
             data: call
@@ -62,15 +80,26 @@ const getDistrito = async (req: Request, res: Response) => {
 
 const insertDistrito = async (req: Request, res: Response) => {
     try {
-        const { nombre } = req.body;
-        if (!nombre) {
+        const { nombre, id_ruc } = req.body;
+
+
+        if (!nombre || !id_ruc) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El campo "nombre" es requerido.'
+                mensaje: 'Faltan campos requeridos, por favor verifique.'
             });
         }
 
-        const [result]: any[] = await pool.query(`INSERT INTO ${tbDistrito} (nombre) VALUES (?)`, [nombre]);
+        //Verificar si la empresa existe
+        const [empresa]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresa[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+        }
+
+        const [result]: any[] = await pool.query(`INSERT INTO ${tbDistrito} (nombre, id_ruc) VALUES (?,?)`, [nombre, id_ruc]);
 
         if (result.affectedRows === 1) {
             res.json({

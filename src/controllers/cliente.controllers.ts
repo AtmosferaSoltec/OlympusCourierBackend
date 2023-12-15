@@ -1,12 +1,40 @@
 import { Request, Response } from 'express';
 import { getDistritoById } from '../func/funciones';
-import { tbCliente, tbDistrito } from '../func/tablas';
+import { tbCliente, tbDistrito, tbEmpresa } from '../func/tablas';
 import { pool } from '../db';
 
 const getAllClientes = async (req: Request, res: Response) => {
     try {
-        const query = `CALL getAllClientes()`;
-        const [[call]]: any = await pool.query(query);
+
+        const { estado } = req.query;
+
+        //Verificar si existe el id_ruc y el estado
+        if (!estado) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El campo estado y id_ruc son requeridos.'
+            });
+        }
+
+
+        let query = `SELECT ${tbCliente}.*, ${tbDistrito}.nombre as distrito FROM ${tbCliente} LEFT JOIN ${tbDistrito} ON ${tbCliente}.id_distrito = ${tbDistrito}.id`;
+        switch (estado?.toString().toUpperCase()) {
+            case 'S':
+                query += ` WHERE ${tbCliente}.activo = 'S'`;
+                break;
+            case 'N':
+                query += ` WHERE ${tbCliente}.activo = 'N'`;
+                break;
+            case 'T': break;
+            default: {
+                res.json({
+                    isSuccess: false,
+                    mensaje: 'El estado no es válido'
+                })
+                return;
+            }
+        }
+        const [call]: any[] = await pool.query(query);
         res.json({
             isSuccess: true,
             data: call
@@ -138,6 +166,7 @@ const insertCliente = async (req: Request, res: Response) => {
                 mensaje: 'El PASAPORTE debe tener 12 dígitos'
             });
         }
+
 
         //Verificar si documento ya existe
         const [verificarDocumento]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE documento = ?`, [documento]);

@@ -1,7 +1,7 @@
 import { getClienteById, getItemsRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbItemReparto, tbReparto } from '../func/tablas';
+import { tbCliente, tbComprobante, tbEmpresa, tbItemReparto, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
 
 /**
  * Devolver por rangos
@@ -36,14 +36,35 @@ import { tbItemReparto, tbReparto } from '../func/tablas';
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
 
-        const { estado } = req.query;
-        let query = `SELECT * FROM ${tbReparto}`;
+        const { estado, id_ruc } = req.query;
+
+        // Verificar si se proporcionó el estado y el id_ruc
+        if (!estado || !id_ruc) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'Se requiere del estado y el id_ruc'
+            });
+            return;
+        }
+
+        //Verificar si la empresa existe
+        const [empresaRows]: any[] = await pool.query(`SELECT * FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresaRows.length === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+            return;
+        }
+
+        // Verificar si el estado es válido
+        let query = `SELECT ${tbReparto}.*, ${tbComprobante}.id as id_comprobante FROM ${tbReparto} LEFT JOIN ${tbComprobante} ON ${tbReparto}.id = ${tbComprobante}.id_reparto WHERE ${tbReparto}.id_ruc = ?`;
         switch (estado?.toString().toUpperCase()) {
             case 'S':
-                query += " WHERE activo = 'S'";
+                query += " AND activo = 'S'";
                 break;
             case 'N':
-                query += " WHERE activo = 'N'";
+                query += " AND activo = 'N'";
                 break;
             case 'T': break;
             default: {
@@ -55,12 +76,13 @@ const getAllRepartos = async (req: Request, res: Response) => {
             }
         }
 
-
-        const [repartos]: any[] = await pool.query(query);
+        const [repartos]: any[] = await pool.query(query, [id_ruc]);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
                 return {
                     id: reparto.id,
+                    id_ruc: reparto.id_ruc,
+                    num_reparto: reparto.num_reparto,
                     anotacion: reparto.anotacion,
                     clave: reparto.clave,
                     estado: reparto.estado,
@@ -72,8 +94,8 @@ const getAllRepartos = async (req: Request, res: Response) => {
                     usuario: await getUsuarioById(reparto.id_usuario),
                     id_repartidor: reparto.id_repartidor,
                     repartidor: await getUsuarioById(reparto.id_repartidor),
-                    id_comprobante: await getUsuarioById(reparto.id_repartidor),
-                    comprobante: null,
+                    id_comprobante: reparto.id_comprobante,
+                    url_foto: reparto?.url_foto,
                     total: parseFloat(reparto.total),
                     activo: reparto.activo,
                     items: await getItemsRepartoByRepartoId(reparto.id)
@@ -93,10 +115,32 @@ const getAllRepartos = async (req: Request, res: Response) => {
 };
 
 const getReparto = async (req: Request, res: Response) => {
-    const repartoId = req.params.id;
+
     try {
-        const queryReparto = `SELECT * FROM ${tbReparto} WHERE id = ? LIMIT 1`;
-        const [reparto]: any[] = await pool.query(queryReparto, [repartoId]);
+        const id_reparto = req.params.id;
+        const { id_ruc } = req.query;
+
+        // Verificar si se proporcionó el id_ruc y el id_reparto
+        if (!id_ruc || !id_reparto) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'Se requiere del id_ruc y el id_reparto'
+            });
+            return;
+        }
+
+        //Verificar si la empresa existe
+        const [empresaRows]: any[] = await pool.query(`SELECT * FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresaRows.length === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+            return;
+        }
+
+        let query = `SELECT ${tbReparto}.*, ${tbComprobante}.id as id_comprobante FROM ${tbReparto} LEFT JOIN ${tbComprobante} ON ${tbReparto}.id = ${tbComprobante}.id_reparto WHERE ${tbReparto}.id_ruc = ? AND ${tbReparto}.id = ? LIMIT 1`;
+        const [reparto]: any[] = await pool.query(query, [id_ruc,id_reparto]);
 
         if (reparto.length === 0) {
             res.json({
@@ -108,6 +152,8 @@ const getReparto = async (req: Request, res: Response) => {
 
         const repartoConItems = {
             id: reparto[0].id,
+            id_ruc: reparto[0].id_ruc,
+            num_reparto: reparto[0].num_reparto,
             anotacion: reparto[0].anotacion,
             clave: reparto[0].clave,
             estado: reparto[0].estado,
@@ -119,8 +165,8 @@ const getReparto = async (req: Request, res: Response) => {
             usuario: await getUsuarioById(reparto[0].id_usuario),
             id_repartidor: reparto[0].id_repartidor,
             repartidor: await getUsuarioById(reparto[0].id_repartidor),
-            id_comprobante: await getUsuarioById(reparto[0].id_repartidor),
-            comprobante: null,
+            id_comprobante: reparto[0]?.id_comprobante,
+            url_foto: reparto[0].url_foto,
             total: parseFloat(reparto[0].total),
             activo: reparto[0].activo,
             items: await getItemsRepartoByRepartoId(reparto[0].id)
@@ -139,8 +185,44 @@ const getReparto = async (req: Request, res: Response) => {
 
 const insertReparto = async (req: Request, res: Response) => {
     try {
-        const { anotacion, clave, id_cliente, id_usuario, items } = req.body;
+        const { id_ruc, anotacion, clave, id_cliente, id_usuario, items } = req.body;
 
+        //Verificar si todos los campos fueron proporcionados
+        if (!id_ruc || !clave || !id_cliente || !id_usuario || !items) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Faltan campos requeridos, por favor verifique.'
+            });
+        }
+
+        //Verificar si la empresa existe
+        const [empresaRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresaRows[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+        }
+
+        //Verificar si el cliente existe
+        const [clienteRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE id = ?`, [id_cliente]);
+        if (clienteRows[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El cliente con ID: ${id_cliente} no existe`
+            });
+        }
+
+        //Verificar si el usuario existe
+        const [usuarioRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ?`, [id_usuario]);
+        if (usuarioRows[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El usuario con ID: ${id_usuario} no existe`
+            });
+        }
+
+        //Verificar si los items son una lista de objetos
         if (!Array.isArray(items) || items.some(item => typeof item !== 'object')) {
             return res.json({
                 isSuccess: false,
@@ -162,9 +244,15 @@ const insertReparto = async (req: Request, res: Response) => {
             return acumulador + item.precio;
         }, 0);
 
+        // Obtener el num_reparto actual de la tabla empresa usando el ruc
+        const [empresasRows]: any[] = await pool.query(`SELECT num_reparto FROM ${tbEmpresa} WHERE id = ? LIMIT 1`, [id_ruc]);
+        const num_reparto_empresa = empresasRows[0].num_reparto;
 
-        const repartoQuery = `INSERT INTO ${tbReparto} (anotacion, clave, id_cliente, id_usuario, total) VALUES (?,?,?,?,?)`;
-        const [repartoResult]: any[] = await pool.query(repartoQuery, [anotacion, clave, id_cliente, id_usuario, total]);
+        const nuevo_num_reparto = num_reparto_empresa + 1;
+
+
+        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?,?)`;
+        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, id_cliente, id_usuario, total]);
 
         if (repartoResult.affectedRows !== 1) {
             return res.json({
@@ -172,9 +260,21 @@ const insertReparto = async (req: Request, res: Response) => {
                 mensaje: 'No se pudo insertar'
             });
         }
+        
+        await pool.query(`UPDATE ${tbEmpresa} SET num_reparto = ? WHERE id = ?`, [nuevo_num_reparto, id_ruc]);
 
         for (const item of items) {
             const { num_guia, detalle, cant, precio, id_tipo_paquete } = item;
+
+            // Verificar si el tipo de paquete existe
+            const [tipoPaqueteRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbTipoPaquete} WHERE id = ?`, [id_tipo_paquete]);
+            if (tipoPaqueteRows[0].count === 0) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: `El tipo de paquete con ID: ${id_tipo_paquete} no existe`
+                });
+            }
+
             const itemQuery = `INSERT INTO ${tbItemReparto} (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)`;
             const [itemResult]: any[] = await pool.query(itemQuery, [num_guia, detalle, cant, precio, repartoResult.insertId, id_tipo_paquete]);
 
@@ -193,7 +293,7 @@ const insertReparto = async (req: Request, res: Response) => {
     } catch (err: any) {
         res.json({
             isSuccess: false,
-            mensaje: err.message || 'Error desconocido'
+            mensaje: err
         });
     }
 };

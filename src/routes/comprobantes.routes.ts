@@ -4,7 +4,7 @@ import comprobantesControllers from '../controllers/comprobantes.controllers';
 const router = Router();
 
 router.get('/', comprobantesControllers.listarTodos);
-router.get('/', comprobantesControllers.get);
+router.get('/:id', comprobantesControllers.get);
 router.post('/', comprobantesControllers.insertar);
 router.put('/:id', comprobantesControllers.actualizar);
 router.patch('/:id', comprobantesControllers.setActivoComprobante);

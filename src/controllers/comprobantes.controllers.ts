@@ -1,7 +1,7 @@
-import e, { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
-import { tbComprobante, tbItemReparto, tbMetodoPago, tbReparto, tbTipoDoc, tbTipoPaquete, tbUsuario, tb_contador } from '../func/tablas';
+import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
@@ -41,7 +41,7 @@ const listarTodos = async (req: Request, res: Response) => {
 
 const get = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
+        const { id } = req.params;
 
         //Verificar que el reparto exista
         const [verificarComprobante]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbComprobante} WHERE id_reparto = ? LIMIT 1`, [id]);
@@ -52,7 +52,7 @@ const get = async (req: Request, res: Response) => {
                 mensaje: 'El comprobante no existe'
             });
             return;
-        }
+        };
 
         const query = `SELECT * FROM ${tbComprobante} WHERE id_reparto = ? LIMIT 1;`;
         const [comprobante]: any[] = await pool.query(query, [id]);
@@ -75,10 +75,10 @@ const insertar = async (req: Request, res: Response) => {
             id_reparto, tipo_comprobante,
             id_metodo_pago, num_operacion, foto_operacion,
             tipo_doc, documento, nombre, direc, correo, telefono,
-            id_usuario, ruc } = req.body;
+            id_usuario, id_ruc } = req.body;
 
         // Validar que todos los campos requeridos estén presentes
-        if (!ruc || !id_reparto || !tipo_comprobante || !id_metodo_pago || !tipo_doc || !documento || !nombre || !direc || !id_usuario) {
+        if (!id_ruc || !id_reparto || !tipo_comprobante || !id_metodo_pago || !tipo_doc || !documento || !nombre || !direc || !id_usuario) {
             res.json({
                 isSuccess: false,
                 mensaje: 'Se requieren todos los campos'
@@ -134,8 +134,11 @@ const insertar = async (req: Request, res: Response) => {
             return;
         }
 
+        let queryItems = `SELECT ${tbItemReparto}.*, ${tbTipoPaquete}.nombre as tipo_paquete FROM ${tbItemReparto} LEFT JOIN ${tbTipoPaquete} ON ${tbItemReparto}.id_tipo_paquete = ${tbTipoPaquete}.id WHERE ${tbItemReparto}.id_reparto = ?`;
+
         //Traer Lista de Items del Reparto con tipo de paquete
-        const [[items]]: any = await pool.query(`CALL getAllItemsReparto(?);`, [id_reparto]);
+        const [items]: any[] = await pool.query(queryItems, [id_reparto]);
+
         if (items.length == 0) {
             res.json({
                 isSuccess: false,
@@ -185,7 +188,7 @@ const insertar = async (req: Request, res: Response) => {
         }
 
         //Obtener Credenciales
-        const [credenciales]: any[] = await pool.query(`SELECT * FROM ${tb_contador} WHERE ruc = ? LIMIT 1`, [ruc]);
+        const [credenciales]: any[] = await pool.query(`SELECT * FROM ${tbEmpresa} WHERE id = ? LIMIT 1`, [id_ruc]);
         if (credenciales.length === 0) {
             res.json({
                 isSuccess: false,
@@ -290,11 +293,12 @@ const insertar = async (req: Request, res: Response) => {
         }
 
         const { enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr } = call.data;
-        const query = `INSERT INTO ${tbComprobante} (id_reparto, ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        const [result]: any[] = await pool.query(query, [id_reparto, ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
+        const query = `INSERT INTO ${tbComprobante} (id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        const [result]: any[] = await pool.query(query, [id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
 
         //Subir Contador
-        const [resContador]: any[] = await pool.query(`CALL subirContador(?,?)`, [tipo_comprobante, num_serie])
+        const queryContador = `UPDATE ${tbEmpresa} SET num_${tipo_comprobante === 1 ? 'f' : 'b'} = ? WHERE id = ?`
+        const [resContador]: any[] = await pool.query(queryContador, [num_serie, id_ruc])
 
         if (result.affectedRows === 1 && resContador.affectedRows === 1) {
             res.json({

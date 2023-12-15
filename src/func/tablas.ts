@@ -1,5 +1,4 @@
 export const tbDistrito = 'distrito';
-export const tb_contador = 'contador';
 export const tbDocumento = 'tipo_doc';
 export const tbCliente = 'cliente';
 export const tbUsuario = 'usuario'

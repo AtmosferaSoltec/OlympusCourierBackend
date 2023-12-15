@@ -1,19 +1,35 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbTipoPaquete } from '../func/tablas';
+import { tbEmpresa, tbTipoPaquete } from '../func/tablas';
 
 const getAllPaquetes = async (req: Request, res: Response) => {
     try {
+        const { estado, id_ruc } = req.query;
 
+        //Verificar si existe el id_ruc
+        if (!id_ruc) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El campo id_ruc es requerido.'
+            });
+        }
 
-        const { estado } = req.query;
-        let query = `SELECT * FROM ${tbTipoPaquete}`;
+        //Verificar si la empresa existe
+        const [empresa]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresa[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+        }
+
+        let query = `SELECT * FROM ${tbTipoPaquete} WHERE id_ruc = ?`;
         switch (estado?.toString().toUpperCase()) {
             case 'S':
-                query += " WHERE activo = 'S'";
+                query += " AND activo = 'S'";
                 break;
             case 'N':
-                query += " WHERE activo = 'N'";
+                query += " AND activo = 'N'";
                 break;
             case 'T': break;
             default: {
@@ -24,7 +40,7 @@ const getAllPaquetes = async (req: Request, res: Response) => {
                 return;
             }
         }
-        const [call]: any[] = await pool.query(query);
+        const [call]: any[] = await pool.query(query, [id_ruc]);
         res.json({
             isSuccess: true,
             data: call
@@ -63,18 +79,27 @@ const getPaquete = async (req: Request, res: Response) => {
 
 const insertPaquete = async (req: Request, res: Response) => {
     try {
-        const { nombre } = req.body;
+        const { nombre, id_ruc } = req.body;
 
         //Verificarlos cmapos estan completos
-        if (!nombre) {
+        if (!nombre || !id_ruc) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El campo nombre es requerido.'
+                mensaje: 'Los campos "nombre" y "id_ruc" son requeridos.'
+            });
+        }
+
+        //Verificar si la empresa existe
+        const [empresa]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresa[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
             });
         }
 
         //Verificar si el nombre ya existe en la tabla
-        const [rows]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbTipoPaquete} WHERE nombre = ?`, [nombre]);
+        const [rows]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbTipoPaquete} WHERE nombre = ? AND id_ruc = ?`, [nombre, id_ruc]);
         if (rows[0].count > 0) {
             return res.json({
                 isSuccess: false,
@@ -82,7 +107,7 @@ const insertPaquete = async (req: Request, res: Response) => {
             });
         }
 
-        const [result]: any[] = await pool.query(`INSERT INTO ${tbTipoPaquete} (nombre) VALUES (?)`, [nombre]);
+        const [result]: any[] = await pool.query(`INSERT INTO ${tbTipoPaquete} (id_ruc, nombre) VALUES (?,?)`, [id_ruc, nombre]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -125,7 +150,7 @@ const updatePaquete = async (req: Request, res: Response) => {
                 mensaje: `El paquete con ID: ${id} no existe`
             });
         }
-        
+
         //Verificamos si el nombre ya existe
         const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbTipoPaquete} WHERE nombre = ? AND id != ?`, [nombre, id]);
         if (nombreExistente[0].count > 0) {

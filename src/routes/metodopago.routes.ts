@@ -1,8 +1,12 @@
 import { Router } from 'express';
-import tipoPaquetesControllers from '../controllers/metodopago.controllers';
+import metodoPagoControllers from '../controllers/metodopago.controllers';
 
 const router = Router();
 
-router.get('/', tipoPaquetesControllers.getAll);
+router.get('/', metodoPagoControllers.getAll);
+
+router.post('/', metodoPagoControllers.insert);
+
+router.put('/', metodoPagoControllers.update);
 
 export { router };

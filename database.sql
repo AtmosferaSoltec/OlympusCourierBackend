@@ -5,7 +5,15 @@ USE olympus_courier;
 CREATE TABLE empresa (
   id INT AUTO_INCREMENT PRIMARY KEY,
   ruc CHAR(11),
-  razon_social VARCHAR(100)
+  razon_social VARCHAR(100),
+  ruta VARCHAR(255),
+  token VARCHAR(255),
+  num_reparto INT,
+  serie_f CHAR(4),
+  num_f INT,
+  serie_b CHAR(4),
+  num_b INT,
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
 CREATE TABLE distrito (
@@ -37,13 +45,11 @@ CREATE TABLE tipo_paquete (
 
 CREATE TABLE tipo_doc (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  id_ruc INT,
   cod CHAR(1) UNIQUE,
   detalle VARCHAR(255),
   cant_caracteres INT,
   fecha_creacion TIMESTAMP DEFAULT now(),
-  activo CHAR(1) DEFAULT 'S',
-  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+  activo CHAR(1) DEFAULT 'S'
 );
 
 CREATE TABLE rol (
@@ -54,7 +60,6 @@ CREATE TABLE rol (
 
 CREATE TABLE cliente (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  id_ruc INT,
   cod_tipodoc CHAR(1),
   documento VARCHAR(20) UNIQUE NOT NULL,
   nombres VARCHAR(255) NOT NULL,
@@ -68,8 +73,7 @@ CREATE TABLE cliente (
   fecha_creacion TIMESTAMP DEFAULT now(),
   activo CHAR(1) DEFAULT 'S',
   FOREIGN KEY (cod_tipodoc) REFERENCES tipo_doc(cod),
-  FOREIGN KEY (id_distrito) REFERENCES distrito(id),
-  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+  FOREIGN KEY (id_distrito) REFERENCES distrito(id)
 );
 
 CREATE TABLE usuario (
@@ -81,7 +85,7 @@ CREATE TABLE usuario (
   ape_materno VARCHAR(255),
   telefono VARCHAR(15) UNIQUE,
   correo VARCHAR(255) UNIQUE,
-  fecha_nac DATE DEFAULT '1900-01-01' NOT NULL,
+  fecha_nac DATE,
   fecha_creacion TIMESTAMP DEFAULT now(),
   clave VARCHAR(255),
   cod_rol CHAR(1),
@@ -93,6 +97,7 @@ CREATE TABLE usuario (
 CREATE TABLE reparto (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_ruc INT,
+  num_reparto INT,
   anotacion VARCHAR(255) DEFAULT '',
   clave VARCHAR(255) DEFAULT '',
   estado CHAR(1) DEFAULT 'P',
@@ -109,6 +114,12 @@ CREATE TABLE reparto (
   FOREIGN KEY (id_repartidor) REFERENCES usuario(id),
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
+
+INSERT INTO reparto (
+id_ruc, anotacion, clave, id_cliente, id_usuario, total
+) VALUES
+(1,'Cliente quiere que vayan a las 12pm','1234',3,1,30);
+
 
 CREATE TABLE item_reparto (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -153,19 +164,6 @@ CREATE TABLE comprobante (
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
-CREATE TABLE contador(
-	id INT auto_increment primary key,
-    id_ruc INT,
-    razon_social VARCHAR(50),
-    ruta VARCHAR(255),
-    token VARCHAR(255),
-    serie_f CHAR(4),
-    num_f INT,
-    serie_b CHAR(4),
-    num_b INT,
-	FOREIGN KEY (id_ruc) REFERENCES empresa(id)
-);
-
 CREATE TABLE auditoria (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_ruc INT,
@@ -192,7 +190,32 @@ VALUES
   ('A', 'Admin'),
   ('D', 'Delivery');
   
-CALL getAllItemsReparto(1);
+  
+SHOW TRIGGERS;
+DROP TRIGGER insert_num_reparto;
+
+/** Trigers**/
+-- Crear un trigger después de insertar en una tabla
+DELIMITER //
+CREATE TRIGGER insert_num_reparto
+AFTER INSERT ON reparto
+FOR EACH ROW
+BEGIN
+    -- Obtener el num_reparto actual de la tabla empresa usando el ruc del nuevo reparto
+    SET @num_reparto_empresa = (SELECT num_reparto FROM empresa WHERE id = NEW.id_ruc LIMIT 1);
+
+    -- Incrementar el num_reparto
+    SET @nuevo_num_reparto = @num_reparto_empresa + 1;
+
+    -- Actualizar el nuevo num_reparto en la tabla empresa
+    UPDATE empresa SET num_reparto = @nuevo_num_reparto WHERE id = NEW.id_ruc;
+
+    -- Actualizar el nuevo num_reparto en el nuevo registro de la tabla reparto
+    UPDATE reparto SET num_reparto = @nuevo_num_reparto WHERE id = NEW.id;
+END;
+//
+DELIMITER ;
+
 
 /**Resetear valores de una tabla*/
 SET
