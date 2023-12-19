@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbEmpresa, tbRol, tbUsuario } from '../func/tablas';
+import "dotenv/config";
+import jwt from 'jsonwebtoken';
+import { RequestWithUser } from '../interfaces/usuario';
+
+const secretKey = process.env.SECRET_KEY || 'secretKey';
 
 const login = async (req: Request, res: Response) => {
     try {
@@ -13,15 +18,18 @@ const login = async (req: Request, res: Response) => {
             });
         }
 
-        const consulta = `SELECT id, id_ruc FROM ${tbUsuario} WHERE documento = ? AND clave = ? LIMIT 1`;
+        const consulta = `SELECT * FROM ${tbUsuario} WHERE documento = ? AND clave = ? LIMIT 1`;
         const [resultados]: any[] = await pool.query(consulta, [documento, clave]);
         if (resultados.length > 0) {
+
+            const payload = resultados[0];
+            const token = jwt.sign(payload, secretKey, { expiresIn: '1h' });
+
             res.json({
                 isSuccess: true,
                 mensaje: 'Inicio de sesión exitoso',
                 data: {
-                    id: resultados[0].id,
-                    ruc: resultados[0].id_ruc,
+                    token
                 }
             });
         } else {
@@ -38,29 +46,16 @@ const login = async (req: Request, res: Response) => {
     }
 };
 
-const getAllUsuarios = async (req: Request, res: Response) => {
+const getAllUsuarios = async (req: RequestWithUser, res: Response) => {
     try {
-        const { estado, id_ruc } = req.query;
+        const { id_ruc } = req.user;
+
+        const { estado } = req.query;
         //Validar los campos
-        if (!id_ruc) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'Se requiere del id_ruc'
-            })
-        }
         if (!estado) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Se requiere del estado'
-            })
-        }
-
-        //Verificar si el id_ruc existe
-        const [rucExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
-        if (rucExistente[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El ruc no existe'
             })
         }
 
@@ -345,12 +340,13 @@ const setActivoUsuario = async (req: Request, res: Response) => {
     }
 }
 
-const cambiarPassword = async (req: Request, res: Response) => {
+const cambiarPassword = async (req: RequestWithUser, res: Response) => {
     try {
-        const { id, pass_anterior, pass_nueva } = req.body;
+        const id = req.user.id;
+        const { pass_anterior, pass_nueva } = req.body;
 
         // Validar si los campos estan vacios
-        if (!id || !pass_anterior || !pass_nueva) {
+        if (!pass_anterior || !pass_nueva) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Por favor, proporciona todos los campos.'
@@ -396,4 +392,4 @@ const cambiarPassword = async (req: Request, res: Response) => {
     }
 }
 
-export default { login, getAllUsuarios, getUsuario, insertUsuario, updateUsuario, setActivoUsuario, cambiarPassword}
+export default { login, getAllUsuarios, getUsuario, insertUsuario, updateUsuario, setActivoUsuario, cambiarPassword }

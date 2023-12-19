@@ -2,11 +2,15 @@ import { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
 import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
+import { RequestWithUser } from '../interfaces/usuario';
 
-const listarTodos = async (req: Request, res: Response) => {
+const listarTodos = async (req: RequestWithUser, res: Response) => {
     try {
+
+        const { id_ruc } = req.user;
+
         const { estado, metodoPago, tipoDoc, idUser } = req.query;
-        let query = `SELECT * FROM ${tbComprobante}`;
+        let query = `SELECT * FROM ${tbComprobante} WHERE id_ruc = ?`;
 
         switch (estado?.toString().toUpperCase()) {
             case 'S':
@@ -25,7 +29,7 @@ const listarTodos = async (req: Request, res: Response) => {
             }
         }
 
-        const [destinos]: any[] = await pool.query(query);
+        const [destinos]: any[] = await pool.query(query, [id_ruc]);
         res.json({
             isSuccess: true,
             data: destinos
@@ -69,19 +73,61 @@ const get = async (req: Request, res: Response) => {
 };
 
 
-const insertar = async (req: Request, res: Response) => {
+const insertar = async (req: RequestWithUser, res: Response) => {
     try {
+        const { id_ruc, id } = req.user;
         const {
             id_reparto, tipo_comprobante,
             id_metodo_pago, num_operacion, foto_operacion,
-            tipo_doc, documento, nombre, direc, correo, telefono,
-            id_usuario, id_ruc } = req.body;
+            tipo_doc, documento, nombre, direc, correo, telefono } = req.body;
 
         // Validar que todos los campos requeridos estén presentes
-        if (!id_ruc || !id_reparto || !tipo_comprobante || !id_metodo_pago || !tipo_doc || !documento || !nombre || !direc || !id_usuario) {
+        if (!id_reparto) {
             res.json({
                 isSuccess: false,
-                mensaje: 'Se requieren todos los campos'
+                mensaje: 'El campo id_reparto es requerido'
+            });
+            return;
+        }
+        if (!tipo_comprobante) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo tipo_comprobante es requerido'
+            });
+            return;
+        }
+        if (!id_metodo_pago) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo id_metodo_pago es requerido'
+            });
+            return;
+        }
+        if (!tipo_doc) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo tipo_doc es requerido'
+            });
+            return;
+        }
+        if (!documento) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo documento es requerido'
+            });
+            return;
+        }
+        if (!nombre) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo nombre es requerido'
+            });
+            return;
+        }
+        if (!direc) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo direc es requerido'
             });
             return;
         }
@@ -120,16 +166,6 @@ const insertar = async (req: Request, res: Response) => {
             res.json({
                 isSuccess: false,
                 mensaje: 'El tipo de documento debe ser 1 o 6'
-            });
-            return;
-        }
-
-        //Verificar que el id_usuario exista
-        const [verificarUsuario]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbUsuario} WHERE id = ?`, [id_usuario]);
-        if (verificarUsuario[0].count === 0) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'El usuario no existe'
             });
             return;
         }
@@ -294,7 +330,7 @@ const insertar = async (req: Request, res: Response) => {
 
         const { enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr } = call.data;
         const query = `INSERT INTO ${tbComprobante} (id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        const [result]: any[] = await pool.query(query, [id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
+        const [result]: any[] = await pool.query(query, [id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
 
         //Subir Contador
         const queryContador = `UPDATE ${tbEmpresa} SET num_${tipo_comprobante === 1 ? 'f' : 'b'} = ? WHERE id = ?`

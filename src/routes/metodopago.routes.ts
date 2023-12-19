@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import metodoPagoControllers from '../controllers/metodopago.controllers';
+import { checkAuth } from '../middleware/checkAuth';
 
 const router = Router();
 
-router.get('/', metodoPagoControllers.getAll);
+router.get('/', checkAuth as any, metodoPagoControllers.getAll as any);
+router.post('/', checkAuth as any, metodoPagoControllers.insert as any);
+router.put('/', checkAuth as any, metodoPagoControllers.update as any);
+router.patch('/', checkAuth as any, metodoPagoControllers.setActivo as any)
 
-router.post('/', metodoPagoControllers.insert);
-
-router.put('/', metodoPagoControllers.update);
-
-router.patch('/', metodoPagoControllers.setActivo)
 export { router };

@@ -1,24 +1,17 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbEmpresa, tbMetodoPago } from '../func/tablas';
+import { RequestWithUser } from '../interfaces/usuario';
 
-const getAll = async (req: Request, res: Response) => {
+const getAll = async (req: RequestWithUser, res: Response) => {
     try {
-        const { estado, id_ruc } = req.query;
+        const { id_ruc } = req.user;
+        const { estado } = req.query;
         //Verificar si el estado y el id_ruc son válidos
-        if (!estado || !id_ruc) {
+        if (!estado) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El campo estado y id_ruc son requeridos.'
-            });
-        }
-
-        //Verificar si la empresa existe
-        const [empresa]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
-        if (empresa[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: `La empresa con ID: ${id_ruc} no existe`
+                mensaje: 'El campo estado es requerido.'
             });
         }
 
@@ -52,23 +45,15 @@ const getAll = async (req: Request, res: Response) => {
     }
 };
 
-const insert = async (req: Request, res: Response) => {
+const insert = async (req: RequestWithUser, res: Response) => {
     try {
-        const { id_ruc, nombre } = req.body;
+        const { id_ruc } = req.user;
+        const { nombre } = req.body;
 
-        if (!id_ruc || !nombre) {
+        if (!nombre) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'Faltan campos requeridos, por favor verifique.'
-            });
-        }
-
-        //Verificar si RUC existe
-        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
-        if (verificar[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'RUC no encontrado'
+                mensaje: 'Campo nombre es requerido.'
             });
         }
 
@@ -194,4 +179,4 @@ const setActivo = async (req: Request, res: Response) => {
     }
 }
 
-export default { getAll, insert, update, setActivo}
+export default { getAll, insert, update, setActivo }

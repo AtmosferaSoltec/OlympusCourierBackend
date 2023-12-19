@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbEmpresa } from '../func/tablas';
+import { RequestWithUser } from '../interfaces/usuario';
 
-const get = async (req: Request, res: Response) => {
+const get = async (req: RequestWithUser, res: Response) => {
     try {
-        const { id_ruc } = req.query;
+        const { id_ruc } = req.user;
 
         if (!id_ruc) {
             return res.json({
@@ -86,23 +87,15 @@ const insert = async (req: Request, res: Response) => {
     }
 };
 
-const update = async (req: Request, res: Response) => {
+const update = async (req: RequestWithUser, res: Response) => {
     try {
-        const { id_ruc, ruta, token, serie_f, num_f, serie_b, num_b } = req.body;
+        const { id_ruc } = req.user;
+        const { ruta, token, serie_f, num_f, serie_b, num_b } = req.body;
 
-        if (!id_ruc || !serie_f || !serie_b || !ruta || !token) {
+        if (!serie_f || !serie_b || !ruta || !token) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Faltan campos requeridos, por favor verifique.'
-            });
-        }
-
-        //Verificar si el RUC existe
-        const [verificarID]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
-        if (verificarID[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'ID no encontrado'
             });
         }
 

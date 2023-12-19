@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import tipoPaquetesControllers from '../controllers/paquetes.controllers';
+import { checkAuth } from '../middleware/checkAuth';
 
 const router = Router();
 
-router.get('/', tipoPaquetesControllers.getAllPaquetes);
-router.get('/:id', tipoPaquetesControllers.getPaquete);
-router.post('/', tipoPaquetesControllers.insertPaquete);
-router.put('/', tipoPaquetesControllers.updatePaquete);
-router.patch('/:id', tipoPaquetesControllers.setActivoPaquete);
+router.get('/', checkAuth as any, tipoPaquetesControllers.getAllPaquetes as any);
+router.get('/:id', checkAuth as any, tipoPaquetesControllers.getPaquete as any);
+router.post('/', checkAuth as any, tipoPaquetesControllers.insertPaquete as any);
+router.put('/', checkAuth as any, tipoPaquetesControllers.updatePaquete as any);
+router.patch('/:id', checkAuth as any, tipoPaquetesControllers.setActivoPaquete as any);
 
 
 export { router };

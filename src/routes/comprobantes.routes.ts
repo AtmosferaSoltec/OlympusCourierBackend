@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import comprobantesControllers from '../controllers/comprobantes.controllers';
+import { checkAuth } from '../middleware/checkAuth';
 
 const router = Router();
 
-router.get('/', comprobantesControllers.listarTodos);
-router.get('/:id', comprobantesControllers.get);
-router.post('/', comprobantesControllers.insertar);
-router.put('/:id', comprobantesControllers.actualizar);
-router.patch('/:id', comprobantesControllers.setActivoComprobante);
+router.get('/', checkAuth as any, comprobantesControllers.listarTodos as any);
+router.get('/:id', checkAuth as any, comprobantesControllers.get as any);
+router.post('/', checkAuth as any, comprobantesControllers.insertar as any);
+router.put('/:id', checkAuth as any, comprobantesControllers.actualizar as any);
+router.patch('/:id', checkAuth as any, comprobantesControllers.setActivoComprobante as any);
 
 
 export { router };

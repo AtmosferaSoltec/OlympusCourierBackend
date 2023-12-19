@@ -89,7 +89,7 @@ const getCliente = async (req: Request, res: Response) => {
 
 const searchCliente = async (req: Request, res: Response) => {
     try {
-        const datos = req.params.datos;
+        const { datos } = req.params;
         const query = `SELECT * FROM ${tbCliente} WHERE documento LIKE ? OR nombres LIKE ? OR telefono LIKE ? LIMIT 5`;
         const [rows]: any[] = await pool.query(query, [`%${datos}%`, `%${datos}%`, `%${datos}%`]);
 
