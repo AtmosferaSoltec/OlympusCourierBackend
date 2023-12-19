@@ -6,7 +6,7 @@ const router = Router();
 router.get('/', destinoControllers.getAllDistritos);
 router.get('/:id', destinoControllers.getDistrito);
 router.post('/', destinoControllers.insertDistrito);
-router.put('/:id', destinoControllers.updateDistrito);
+router.put('/', destinoControllers.updateDistrito);
 router.patch('/:id', destinoControllers.setActivoDistrito);
 
 export { router };

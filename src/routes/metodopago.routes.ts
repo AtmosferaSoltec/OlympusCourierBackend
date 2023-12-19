@@ -9,4 +9,5 @@ router.post('/', metodoPagoControllers.insert);
 
 router.put('/', metodoPagoControllers.update);
 
+router.patch('/', metodoPagoControllers.setActivo)
 export { router };

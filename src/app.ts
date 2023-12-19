@@ -1,5 +1,5 @@
 import https from 'https';
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import "dotenv/config";
 import fs from 'fs';
@@ -10,6 +10,12 @@ const app = express();
 app.use(cors());
 app.use(express.json())
 app.use('/api', router);
+
+app.get('/ping', (req:Request, res: Response)=>{
+    res.json({
+        mensaje: 'pong'
+    })
+});
 
 app.use((req, res, next) => {
     if (!req.secure) {

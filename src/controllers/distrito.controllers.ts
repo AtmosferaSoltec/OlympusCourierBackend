@@ -123,8 +123,7 @@ const insertDistrito = async (req: Request, res: Response) => {
 
 const updateDistrito = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
-        const { nombre } = req.body;
+        const { id, nombre, id_ruc } = req.body;
 
         if (!nombre) {
             return res.json({
@@ -142,8 +141,17 @@ const updateDistrito = async (req: Request, res: Response) => {
             });
         }
 
+        //Verificamos si existe la empresa
+        const [empresa]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (empresa[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `La empresa con ID: ${id_ruc} no existe`
+            });
+        }
+
         //Verificamos si el nombre ya existe
-        const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbDistrito} WHERE nombre = ? AND id != ?`, [nombre, id]);
+        const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbDistrito} WHERE nombre = ? AND id != ? AND id_ruc = ?`, [nombre, id, id_ruc]);
         if (nombreExistente[0].count > 0) {
             return res.json({
                 isSuccess: false,

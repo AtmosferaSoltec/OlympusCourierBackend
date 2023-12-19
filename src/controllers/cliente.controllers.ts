@@ -134,7 +134,7 @@ const insertCliente = async (req: Request, res: Response) => {
         }
 
         //
-        if (cod_tipodoc !== '6' && cod_tipodoc !== '1' && cod_tipodoc !== '4' && cod_tipodoc !== '7' && cod_tipodoc !== '-') {
+        if (cod_tipodoc !== '6' && cod_tipodoc !== '1') {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El codTipoDoc debe ser 1, 6, 4, 7 o -'
@@ -152,18 +152,6 @@ const insertCliente = async (req: Request, res: Response) => {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El DNI debe tener 8 dígitos'
-            });
-        }
-        if (cod_tipodoc == '4' && documento.length !== 12) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El CARNET DE EXTRANJERÍA debe tener 12 dígitos'
-            });
-        }
-        if (cod_tipodoc == '7' && documento.length !== 12) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El PASAPORTE debe tener 12 dígitos'
             });
         }
 
@@ -198,10 +186,12 @@ const insertCliente = async (req: Request, res: Response) => {
         const query = `INSERT INTO ${tbCliente} (cod_tipodoc,documento,nombres,telefono,correo,genero,id_distrito,direc,referencia,url_maps) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         const [result]: any[] = await pool.query(query, [cod_tipodoc, documento, nombres, telefono, correo, genero, id_distrito, direc, referencia, url_maps]);
 
+        //Verificar si se insertó correctamente y devolver el id insertado
         if (result.affectedRows === 1) {
             res.json({
                 isSuccess: true,
-                mensaje: 'Cliente insertado correctamente'
+                mensaje: 'Cliente insertado correctamente',
+                data: result.insertId
             });
         } else {
             res.json({
@@ -300,8 +290,7 @@ const updateCliente = async (req: Request, res: Response) => {
 
 const setActivoCliente = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
-        const { activo } = req.body;
+        const { id, activo } = req.body;
 
         if (!activo) {
             return res.json({

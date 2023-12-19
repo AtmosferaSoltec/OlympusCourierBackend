@@ -153,4 +153,45 @@ const update = async (req: Request, res: Response) => {
     }
 }
 
-export default { getAll, insert, update }
+const setActivo = async (req: Request, res: Response) => {
+    try {
+        const { id, activo } = req.body;
+
+        if (!id || !activo) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Faltan campos requeridos, por favor verifique.'
+            });
+        }
+
+        //Verificar si el id existe
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE id = ?`, [id]);
+        if (verificar[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'ID no encontrado'
+            });
+        }
+
+        const query = `UPDATE ${tbMetodoPago} SET activo = ? WHERE id = ?`;
+        const [call]: any[] = await pool.query(query, [activo, id]);
+        if (call.affectedRows === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo actualizar'
+            });
+        }
+
+        res.json({
+            isSuccess: true,
+            mensaje: 'Se actualizó correctamente'
+        });
+    } catch (error: any) {
+        res.json({
+            isSuccess: false,
+            mensaje: error.message
+        });
+    }
+}
+
+export default { getAll, insert, update, setActivo}

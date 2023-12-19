@@ -131,8 +131,7 @@ const insertPaquete = async (req: Request, res: Response) => {
 
 const updatePaquete = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
-        const { nombre } = req.body;
+        const { id, nombre, id_ruc } = req.body;
 
         //Verificar si existe el nombre
         if (!nombre) {
@@ -152,7 +151,7 @@ const updatePaquete = async (req: Request, res: Response) => {
         }
 
         //Verificamos si el nombre ya existe
-        const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbTipoPaquete} WHERE nombre = ? AND id != ?`, [nombre, id]);
+        const [nombreExistente]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbTipoPaquete} WHERE nombre = ? AND id != ? AND id_ruc = ?`, [nombre, id, id_ruc]);
         if (nombreExistente[0].count > 0) {
             return res.json({
                 isSuccess: false,

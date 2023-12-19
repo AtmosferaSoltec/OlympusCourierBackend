@@ -6,7 +6,7 @@ const router = Router();
 router.get('/', tipoPaquetesControllers.getAllPaquetes);
 router.get('/:id', tipoPaquetesControllers.getPaquete);
 router.post('/', tipoPaquetesControllers.insertPaquete);
-router.put('/:id', tipoPaquetesControllers.updatePaquete);
+router.put('/', tipoPaquetesControllers.updatePaquete);
 router.patch('/:id', tipoPaquetesControllers.setActivoPaquete);
 
 

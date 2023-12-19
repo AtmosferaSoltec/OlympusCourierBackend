@@ -146,7 +146,7 @@ const insertUsuario = async (req: Request, res: Response) => {
         }
 
         //Validar si el correo ya existe
-        if(correo){
+        if (correo) {
             const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ?`, [correo]);
             if (correoExistente[0].count > 0) {
                 return res.json({
@@ -212,11 +212,36 @@ const insertUsuario = async (req: Request, res: Response) => {
 
 const updateUsuario = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
-        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol } = req.body;
+        const { id, documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol, id_ruc } = req.body;
+
+        // Validar si los campos estan vacios
+        if (!documento || !nombres || !ape_paterno || !clave || !cod_rol || !id_ruc) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Por favor, proporciona todos los campos.'
+            });
+        }
+
+        //Validar si el cod_rol existe
+        const [codRolExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbRol} WHERE cod = ?`, [cod_rol]);
+        if (codRolExistente[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El rol no existe'
+            })
+        }
+
+        //Validar si el id_ruc existe
+        const [idRucExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
+        if (idRucExistente[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El ruc no existe'
+            })
+        }
 
         //Verificar si existe el usuario
-        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ?`, [id]);
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ? AND id_ruc = ?`, [id, id_ruc]);
         if (verificar[0].count === 0) {
             return res.json({
                 isSuccess: false,
@@ -225,7 +250,7 @@ const updateUsuario = async (req: Request, res: Response) => {
         }
 
         // Validar si el documento ya existe
-        const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ?`, [documento, id]);
+        const [documentoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE documento = ? AND id_ruc = ?`, [documento, id, id_ruc]);
         if (documentoExistente[0].count > 1) {
             return res.json({
                 isSuccess: false,
@@ -234,7 +259,7 @@ const updateUsuario = async (req: Request, res: Response) => {
         }
 
         //Validar si el telefono ya existe
-        const [telefonoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE telefono = ?`, [telefono]);
+        const [telefonoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE telefono = ? AND id_ruc = ?`, [telefono, id_ruc]);
         if (telefonoExistente[0].count > 1) {
             return res.json({
                 isSuccess: false,
@@ -243,7 +268,7 @@ const updateUsuario = async (req: Request, res: Response) => {
         }
 
         //Validar si el correo ya existe
-        const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ? AND id != ?`, [correo, id]);
+        const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ? AND id != ? AND id_ruc = ?`, [correo, id, id_ruc]);
         if (correoExistente[0].count > 0) {
             return res.json({
                 isSuccess: false,
@@ -320,4 +345,55 @@ const setActivoUsuario = async (req: Request, res: Response) => {
     }
 }
 
-export default { login, getAllUsuarios, getUsuario, insertUsuario, updateUsuario, setActivoUsuario }
+const cambiarPassword = async (req: Request, res: Response) => {
+    try {
+        const { id, pass_anterior, pass_nueva } = req.body;
+
+        // Validar si los campos estan vacios
+        if (!id || !pass_anterior || !pass_nueva) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Por favor, proporciona todos los campos.'
+            });
+        }
+
+        //Verificar si el usuario existe con COUNT(*) AS
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ?`, [id]);
+        if (verificar[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Usuario no encontrado'
+            });
+        }
+
+        //Verificar si la contraseña anterior es correcta
+        const [verificarPass]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE id = ? AND clave = ?`, [id, pass_anterior]);
+        if (verificarPass[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Contraseña anterior incorrecta'
+            });
+        }
+
+        //Actualizar contraseña
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tbUsuario} SET clave = ? WHERE id = ?`, [pass_nueva, id]);
+        if (updateResult.affectedRows === 1) {
+            res.json({
+                isSuccess: true,
+                mensaje: 'Contraseña actualizada correctamente'
+            });
+        } else {
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo actualizar la contraseña'
+            });
+        };
+    } catch (error: any) {
+        res.json({
+            isSuccess: false,
+            mensaje: error.message
+        });
+    }
+}
+
+export default { login, getAllUsuarios, getUsuario, insertUsuario, updateUsuario, setActivoUsuario, cambiarPassword}
