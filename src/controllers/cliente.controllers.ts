@@ -6,35 +6,26 @@ import { pool } from '../db';
 const getAllClientes = async (req: Request, res: Response) => {
     try {
 
-        const { estado } = req.query;
+        const { estado, num_reparto, cliente } = req.query;
 
-        //Verificar si existe el id_ruc y el estado
-        if (!estado) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El campo estado y id_ruc son requeridos.'
-            });
-        }
+        console.log(estado, );
+        
 
+        let query = `SELECT ${tbCliente}.*, ${tbDistrito}.nombre as distrito FROM ${tbCliente} LEFT JOIN ${tbDistrito} ON ${tbCliente}.id_distrito = ${tbDistrito}.id`
+        let params: any[] = [];
+        let hasWhere = false;
 
-        let query = `SELECT ${tbCliente}.*, ${tbDistrito}.nombre as distrito FROM ${tbCliente} LEFT JOIN ${tbDistrito} ON ${tbCliente}.id_distrito = ${tbDistrito}.id`;
-        switch (estado?.toString().toUpperCase()) {
-            case 'S':
-                query += ` WHERE ${tbCliente}.activo = 'S'`;
-                break;
-            case 'N':
-                query += ` WHERE ${tbCliente}.activo = 'N'`;
-                break;
-            case 'T': break;
-            default: {
-                res.json({
-                    isSuccess: false,
-                    mensaje: 'El estado no es válido'
-                })
-                return;
+        if (estado === 'S' || estado === 'N') {
+            if (hasWhere) {
+                query += ` AND ${tbCliente}.activo = ?`;
+            } else {
+                query += ` WHERE ${tbCliente}.activo = ?`;
+                hasWhere = true;
             }
+            params.push(estado);
         }
-        const [call]: any[] = await pool.query(query);
+
+        const [call]: any[] = await pool.query(query, params);
         res.json({
             isSuccess: true,
             data: call

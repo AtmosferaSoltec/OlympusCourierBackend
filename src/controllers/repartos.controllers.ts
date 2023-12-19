@@ -38,20 +38,32 @@ const getAllRepartos = async (req: RequestWithUser, res: Response) => {
     try {
 
         const { id_ruc } = req.user;
-        const { estado, estado_envio } = req.query;
+        const { estado, estado_envio, num_reparto, cliente } = req.query;
+
+        console.log(estado, estado_envio, num_reparto, cliente);
 
 
-        let query = `SELECT ${tbReparto}.*, ${tbComprobante}.id as id_comprobante FROM ${tbReparto} LEFT JOIN ${tbComprobante} ON ${tbReparto}.id = ${tbComprobante}.id_reparto WHERE ${tbReparto}.id_ruc = ?`
+        let query = `SELECT ${tbReparto}.*, ${tbComprobante}.id as id_comprobante, ${tbCliente}.nombres FROM ${tbReparto} LEFT JOIN ${tbComprobante} ON ${tbReparto}.id = ${tbComprobante}.id_reparto LEFT JOIN ${tbCliente} ON ${tbReparto}.id_cliente = ${tbCliente}.id WHERE ${tbReparto}.id_ruc = ?`
         let params: any[] = [id_ruc];
 
         if (estado === 'S' || estado === 'N') {
-            query += ' AND reparto.activo = ?';
+            query += ` AND ${tbReparto}.activo = ?`;
             params.push(estado);
         }
 
         if (estado_envio === 'E' || estado_envio === 'A' || estado_envio === 'P') {
-            query += ' AND reparto.estado = ?';
+            query += ` AND ${tbReparto}.estado = ?`;
             params.push(estado_envio);
+        }
+
+        if (num_reparto) {
+            query += ` AND ${tbReparto}.num_reparto = ?`;
+            params.push(num_reparto);
+        }
+
+        if (cliente) {
+            query += ` AND ${tbCliente}.nombres LIKE ?`;
+            params.push(`%${cliente}%`);
         }
 
         const [repartos]: any[] = await pool.query(query, params);
