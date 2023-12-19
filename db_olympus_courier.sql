@@ -12,8 +12,7 @@ CREATE TABLE empresa (
   serie_f CHAR(4),
   num_f INT,
   serie_b CHAR(4),
-  num_b INT,
-  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+  num_b INT
 );
 
 CREATE TABLE distrito (
