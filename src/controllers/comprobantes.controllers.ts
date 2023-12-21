@@ -5,75 +5,69 @@ import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbReparto, tbTip
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
-
         const { id_ruc } = req.body.user;
-        const { estado, metodoPago, tipoDoc, idUser } = req.query;
+        const { serie, comprobante, cliente, desde, hasta, tipo_comprobante, activo, id_metodo_pago } = req.query;
+
         let query = `SELECT * FROM ${tbComprobante} WHERE id_ruc = ?`;
         let params: any[] = [id_ruc];
 
-        if (estado === 'S' || estado === 'N') {
-            query += ` AND activo = '${estado}'`;
-            params.push(estado);
+        if (serie) {
+            query += ` AND serie = ?`;
+            params.push(serie);
         }
 
-
-        //Obtener Credenciales
-        const [credenciales]: any[] = await pool.query(`SELECT * FROM ${tbEmpresa} WHERE id = ? LIMIT 1`, [id_ruc]);
-        if (credenciales.length === 0) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'No se encontraron credenciales'
-            });
-            return;
+        if (comprobante) {
+            query += ` AND num_serie = ?`;
+            params.push(comprobante);
         }
 
-        const ruta = credenciales[0].ruta;
-        const headers = {
-            'Authorization': credenciales[0].token,
-            'Content-Type': 'application/json',
+        if (cliente) {
+            query += ` AND nombre LIKE ?`;
+            params.push(`%${cliente}%`);
         }
+
+        if (desde && hasta) {
+            query += ` AND fecha_creacion BETWEEN ? AND ?`;
+            params.push(desde, hasta);
+        }
+
+        if (tipo_comprobante === '1' || tipo_comprobante === '2') {
+            query += ` AND tipo_comprobante = ?`;
+            params.push(tipo_comprobante);
+        }
+
+        if (id_metodo_pago) {
+            const queryMetodoPago = `SELECT * FROM ${tbMetodoPago} WHERE id = ? AND id_ruc = ? LIMIT 1`
+            const [callMetodoPago]: any[] = await pool.query(queryMetodoPago, [id_metodo_pago, id_ruc]);
+            if (callMetodoPago.length > 0) {
+                query += ` AND id_metodo_pago = ?`;
+                params.push(id_metodo_pago);
+            }
+        }
+
+        if (activo === 'S' || activo === 'N') {
+            query += ` AND activo = '${activo}'`;
+            params.push(activo);
+        }
+
+        
+        // Ordenar por fecha de creación
+        query += ` ORDER BY ${tbComprobante}.fecha_creacion DESC`;
+
+        //Maximo 50 repartos
+        query += ` LIMIT 50`;
 
         const [comprobantes]: any[] = await pool.query(query, params);
+        
 
-        //Hacer un map, para hacer una consulta a una api externa y traer el estado del comprobante
-        const comprobantesMap = await Promise.all(comprobantes.map(async (comprobante: any) => {
-            const { enlace } = comprobante;
-            const body = {
-                "operacion": "consultar_comprobante",
-                "tipo_de_comprobante": comprobante.tipo_comprobante,
-                "serie": comprobante.serie,
-                "numero": comprobante.num_serie
-            }
-            try {
-                const call = await axios.post(ruta, body, { headers: headers });
-                if (call.status !== 200) {
-                    return {
-                        ...comprobante
-                    }
-                }
-
-                const { aceptada_por_sunat, sunat_description } = call.data;
-                return {
-                    ...comprobante,
-                    nubefact: call.data
-                }
-            } catch (error) {
-                console.error('Error al consultar comprobante:', error);
-                return {
-                    ...comprobante
-                }
-            }
-        }));
-
-        res.json({
+        return res.json({
             isSuccess: true,
-            data: comprobantesMap
+            data: comprobantes
         });
-    } catch (error) {
-        console.error('Error al recuperar datos de la tabla Comprobantes:', error);
-        res.json({
+    } catch (err: any) {
+        return res.json({
             isSuccess: false,
-            mensaje: 'Error al recuperar datos de la tabla Comprobantes'
+            mensaje: err.message
         })
     }
 };
@@ -110,6 +104,7 @@ const get = async (req: Request, res: Response) => {
 const insertar = async (req: Request, res: Response) => {
     try {
         const { id_ruc, id } = req.body.user;
+
         const {
             tipo_comprobante, id_metodo_pago, num_operacion,
             tipo_doc, documento, nombre,
@@ -274,7 +269,11 @@ const insertar = async (req: Request, res: Response) => {
         montoIgv = +(montoIgv.toFixed(4));
 
         if (+(montoBase + montoIgv).toFixed(4) !== total) {
-            console.log('La suma de montoBase e igv no es igual a total');
+            return res.json({
+                isSuccess: false,
+                mensaje: 'La suma de montoBase e igv no es igual a total'
+
+            })
         }
 
         //Obtener Credenciales

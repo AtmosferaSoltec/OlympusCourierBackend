@@ -278,7 +278,8 @@ const updateCliente = async (req: Request, res: Response) => {
 
 const setActivoCliente = async (req: Request, res: Response) => {
     try {
-        const { id, activo } = req.body;
+        const { id } = req.params;
+        const { activo } = req.body;
 
         if (!activo) {
             return res.json({

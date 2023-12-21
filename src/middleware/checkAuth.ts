@@ -18,7 +18,7 @@ const checkAuth = (req: Request, res: Response, next: NextFunction) => {
             req.body.user = decoded;
             next();
         } else {
-            return res.json({
+            return res.status(401).json({
                 isSuccess: false,
                 mensaje: 'Invalid token'
             });
@@ -26,12 +26,12 @@ const checkAuth = (req: Request, res: Response, next: NextFunction) => {
     } catch (err: any) {
         //Validar si el token ha expirado o no
         if (err instanceof jwt.TokenExpiredError) {
-            return res.json({
+            return res.status(401).json({
                 isSuccess: false,
                 mensaje: 'Token Expirado'
             });
         } else if (err instanceof jwt.JsonWebTokenError) {
-            return res.json({
+            return res.status(401).json({
                 isSuccess: false,
                 mensaje: 'Token Invalido'
             });

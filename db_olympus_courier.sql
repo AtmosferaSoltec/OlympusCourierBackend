@@ -116,25 +116,6 @@ CREATE TABLE reparto (
   FOREIGN KEY (id_comprobante) REFERENCES comprobante(id)
 );
 
-INSERT INTO
-  reparto (
-    id_ruc,
-    anotacion,
-    clave,
-    id_cliente,
-    id_usuario,
-    total
-  )
-VALUES
-  (
-    1,
-    'Cliente quiere que vayan a las 12pm',
-    '1234',
-    3,
-    1,
-    30
-  );
-
 CREATE TABLE item_reparto (
   id INT AUTO_INCREMENT PRIMARY KEY,
   num_guia VARCHAR(15),
@@ -143,8 +124,6 @@ CREATE TABLE item_reparto (
   precio DECIMAL(10, 2),
   id_reparto INT NOT NULL,
   id_tipo_paquete INT NOT NULL,
-  activo CHAR(1) DEFAULT 'S',
-  fecha_creacion TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (id_reparto) REFERENCES reparto(id),
   FOREIGN KEY (id_tipo_paquete) REFERENCES tipo_paquete(id)
 );
@@ -166,6 +145,10 @@ CREATE TABLE comprobante (
   id_usuario INT,
   fecha_creacion TIMESTAMP DEFAULT now(),
   activo CHAR(1) DEFAULT 'S',
+  enlace VARCHAR(255),
+  estado_sunat BOOLEAN,
+  enlace_pdf VARCHAR(255),
+  enlace_xml VARCHAR(255),
   FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id),
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)

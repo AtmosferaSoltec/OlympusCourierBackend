@@ -22,7 +22,7 @@ const login = async (req: Request, res: Response) => {
         if (resultados.length > 0) {
 
             const payload = resultados[0];
-            const token = jwt.sign(payload, secretKey, { expiresIn: '3h' });
+            const token = jwt.sign(payload, secretKey, { expiresIn: '5h' });
 
             res.json({
                 isSuccess: true,
