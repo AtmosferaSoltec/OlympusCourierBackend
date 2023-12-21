@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbEmpresa, tbTipoPaquete } from '../func/tablas';
-import { RequestWithUser } from '../interfaces/usuario';
 
-const getAllPaquetes = async (req: RequestWithUser, res: Response) => {
+const getAllPaquetes = async (req: Request, res: Response) => {
     try {
-        const {id_ruc} = req.user;
+        const { id_ruc } = req.body.user;
         const { estado } = req.query;
 
         let query = `SELECT * FROM ${tbTipoPaquete} WHERE id_ruc = ?`
@@ -23,7 +22,7 @@ const getAllPaquetes = async (req: RequestWithUser, res: Response) => {
         });
     } catch (error: any) {
         console.log(error);
-        
+
         return res.json({
             isSuccess: false,
             mensaje: error.message
@@ -55,9 +54,9 @@ const getPaquete = async (req: Request, res: Response) => {
     }
 };
 
-const insertPaquete = async (req: RequestWithUser, res: Response) => {
+const insertPaquete = async (req: Request, res: Response) => {
     try {
-        const {id_ruc} = req.user;
+        const { id_ruc } = req.body.user;
         const { nombre } = req.body;
 
         //Verificarlos cmapos estan completos
@@ -99,9 +98,9 @@ const insertPaquete = async (req: RequestWithUser, res: Response) => {
     }
 };
 
-const updatePaquete = async (req: RequestWithUser, res: Response) => {
+const updatePaquete = async (req: Request, res: Response) => {
     try {
-        const {id_ruc} = req.user;
+        const { id_ruc } = req.body.user;
         const { id, nombre } = req.body;
 
         //Verificar si existe el nombre

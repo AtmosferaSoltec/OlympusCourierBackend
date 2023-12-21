@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbEmpresa } from '../func/tablas';
-import { RequestWithUser } from '../interfaces/usuario';
 
-const get = async (req: RequestWithUser, res: Response) => {
+const get = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.query;
 
         if (!id_ruc) {
             return res.json({
@@ -87,9 +86,9 @@ const insert = async (req: Request, res: Response) => {
     }
 };
 
-const update = async (req: RequestWithUser, res: Response) => {
+const update = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
         const { ruta, token, serie_f, num_f, serie_b, num_b } = req.body;
 
         if (!serie_f || !serie_b || !ruta || !token) {

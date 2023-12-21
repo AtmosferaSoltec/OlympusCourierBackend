@@ -108,17 +108,32 @@ CREATE TABLE reparto (
   url_foto VARCHAR(500),
   total DECIMAL(10, 2),
   activo CHAR(1) DEFAULT 'S',
+  id_comprobante INT,
   FOREIGN KEY (id_cliente) REFERENCES cliente(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id),
   FOREIGN KEY (id_repartidor) REFERENCES usuario(id),
-  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id),
+  FOREIGN KEY (id_comprobante) REFERENCES comprobante(id)
 );
 
-INSERT INTO reparto (
-id_ruc, anotacion, clave, id_cliente, id_usuario, total
-) VALUES
-(1,'Cliente quiere que vayan a las 12pm','1234',3,1,30);
-
+INSERT INTO
+  reparto (
+    id_ruc,
+    anotacion,
+    clave,
+    id_cliente,
+    id_usuario,
+    total
+  )
+VALUES
+  (
+    1,
+    'Cliente quiere que vayan a las 12pm',
+    '1234',
+    3,
+    1,
+    30
+  );
 
 CREATE TABLE item_reparto (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -137,27 +152,20 @@ CREATE TABLE item_reparto (
 CREATE TABLE comprobante (
   id INT PRIMARY KEY AUTO_INCREMENT,
   id_ruc INT,
-  id_reparto INT,
   tipo_comprobante INT,
   serie VARCHAR(5),
   num_serie INT,
   id_metodo_pago INT,
   num_operacion VARCHAR(255),
-  foto_operacion VARCHAR(500),
   tipo_doc CHAR(1),
   documento VARCHAR(15),
   nombre VARCHAR(100),
   direc VARCHAR(255),
   correo VARCHAR(255),
   telefono VARCHAR(255),
-  enlace VARCHAR(500),
-  url_pdf VARCHAR(500),
-  url_xml VARCHAR(500),
-  url_cdr VARCHAR(500),
   id_usuario INT,
   fecha_creacion TIMESTAMP DEFAULT now(),
   activo CHAR(1) DEFAULT 'S',
-  FOREIGN KEY (id_reparto) REFERENCES reparto(id),
   FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id),
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)
@@ -180,7 +188,6 @@ CREATE TABLE auditoria (
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
-
 INSERT INTO
   rol (cod, nombre)
 VALUES
@@ -188,33 +195,52 @@ VALUES
   ('U', 'Usuario'),
   ('A', 'Admin'),
   ('D', 'Delivery');
-  
-  
+
 SHOW TRIGGERS;
+
 DROP TRIGGER insert_num_reparto;
 
 /** Trigers**/
 -- Crear un trigger después de insertar en una tabla
-DELIMITER //
-CREATE TRIGGER insert_num_reparto
-AFTER INSERT ON reparto
-FOR EACH ROW
-BEGIN
-    -- Obtener el num_reparto actual de la tabla empresa usando el ruc del nuevo reparto
-    SET @num_reparto_empresa = (SELECT num_reparto FROM empresa WHERE id = NEW.id_ruc LIMIT 1);
+DELIMITER / / CREATE TRIGGER insert_num_reparto
+AFTER
+INSERT
+  ON reparto FOR EACH ROW BEGIN -- Obtener el num_reparto actual de la tabla empresa usando el ruc del nuevo reparto
+SET
+  @num_reparto_empresa = (
+    SELECT
+      num_reparto
+    FROM
+      empresa
+    WHERE
+      id = NEW.id_ruc
+    LIMIT
+      1
+  );
 
-    -- Incrementar el num_reparto
-    SET @nuevo_num_reparto = @num_reparto_empresa + 1;
+-- Incrementar el num_reparto
+SET
+  @nuevo_num_reparto = @num_reparto_empresa + 1;
 
-    -- Actualizar el nuevo num_reparto en la tabla empresa
-    UPDATE empresa SET num_reparto = @nuevo_num_reparto WHERE id = NEW.id_ruc;
+-- Actualizar el nuevo num_reparto en la tabla empresa
+UPDATE
+  empresa
+SET
+  num_reparto = @nuevo_num_reparto
+WHERE
+  id = NEW.id_ruc;
 
-    -- Actualizar el nuevo num_reparto en el nuevo registro de la tabla reparto
-    UPDATE reparto SET num_reparto = @nuevo_num_reparto WHERE id = NEW.id;
+-- Actualizar el nuevo num_reparto en el nuevo registro de la tabla reparto
+UPDATE
+  reparto
+SET
+  num_reparto = @nuevo_num_reparto
+WHERE
+  id = NEW.id;
+
 END;
-//
-DELIMITER ;
 
+/ / DELIMITER;
 
 /**Resetear valores de una tabla*/
 SET

@@ -1,9 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import "dotenv/config";
-import { RequestWithUser } from '../interfaces/usuario';
 
-const checkAuth = (req: RequestWithUser, res: Response, next: NextFunction) => {
+const checkAuth = (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers['authorization'];
 
     if (!token) {
@@ -16,7 +15,7 @@ const checkAuth = (req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY as string);
         if (typeof decoded === 'object') {
-            req.user = decoded;
+            req.body.user = decoded;
             next();
         } else {
             return res.json({

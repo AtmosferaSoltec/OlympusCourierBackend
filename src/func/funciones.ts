@@ -1,5 +1,5 @@
 import { pool } from '../db';
-import { tbCliente, tbDistrito, tbItemReparto, tbTipoDoc, tbUsuario } from './tablas';
+import { tbCliente, tbComprobante, tbDistrito, tbItemReparto, tbReparto, tbTipoDoc, tbTipoPaquete, tbUsuario } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
@@ -67,9 +67,23 @@ export const getUsuarioById = async (id: number) => {
     }
 };
 
+export const getComprobanteById = async (id: number) => {
+    try {
+        const [resultado]: any[] = await pool.query(`SELECT * FROM ${tbComprobante} WHERE id = ? LIMIT 1`, [id]);
+        if (resultado.length === 0) {
+            return null;
+        } else {
+            const { tipo_comprobante, serie, num_serie } = resultado[0];
+            return { tipo_comprobante, serie, num_serie };
+        }
+    } catch (error) {
+        return null;
+    }
+};
+
 export const getItemsRepartoByRepartoId = async (id: number) => {
     try {
-        const [items]: any[] = await pool.query(`SELECT * FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
+        const [items]: any[] = await pool.query(`SELECT ir.*, tp.nombre as tipo_paquete FROM ${tbItemReparto} ir LEFT JOIN ${tbTipoPaquete} tp ON ir.id_tipo_paquete = tp.id WHERE id_reparto = ?`, [id]);
         return items;
     } catch (error) {
         console.log(error);

@@ -3,7 +3,6 @@ import { pool } from '../db';
 import { tbEmpresa, tbRol, tbUsuario } from '../func/tablas';
 import "dotenv/config";
 import jwt from 'jsonwebtoken';
-import { RequestWithUser } from '../interfaces/usuario';
 
 const secretKey = process.env.SECRET_KEY || 'secretKey';
 
@@ -23,7 +22,7 @@ const login = async (req: Request, res: Response) => {
         if (resultados.length > 0) {
 
             const payload = resultados[0];
-            const token = jwt.sign(payload, secretKey, { expiresIn: '1h' });
+            const token = jwt.sign(payload, secretKey, { expiresIn: '3h' });
 
             res.json({
                 isSuccess: true,
@@ -46,9 +45,9 @@ const login = async (req: Request, res: Response) => {
     }
 };
 
-const getAllUsuarios = async (req: RequestWithUser, res: Response) => {
+const getAllUsuarios = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
 
         const { estado } = req.query;
         //Validar los campos
@@ -207,7 +206,8 @@ const insertUsuario = async (req: Request, res: Response) => {
 
 const updateUsuario = async (req: Request, res: Response) => {
     try {
-        const { id, documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol, id_ruc } = req.body;
+        const { id } = req.params;
+        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol, id_ruc } = req.body;
 
         // Validar si los campos estan vacios
         if (!documento || !nombres || !ape_paterno || !clave || !cod_rol || !id_ruc) {
@@ -340,9 +340,9 @@ const setActivoUsuario = async (req: Request, res: Response) => {
     }
 }
 
-const cambiarPassword = async (req: RequestWithUser, res: Response) => {
+const cambiarPassword = async (req: Request, res: Response) => {
     try {
-        const id = req.user.id;
+        const { id } = req.body.user;
         const { pass_anterior, pass_nueva } = req.body;
 
         // Validar si los campos estan vacios

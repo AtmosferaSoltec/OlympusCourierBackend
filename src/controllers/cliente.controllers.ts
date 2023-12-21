@@ -8,9 +8,6 @@ const getAllClientes = async (req: Request, res: Response) => {
 
         const { estado, num_reparto, cliente } = req.query;
 
-        console.log(estado, );
-        
-
         let query = `SELECT ${tbCliente}.*, ${tbDistrito}.nombre as distrito FROM ${tbCliente} LEFT JOIN ${tbDistrito} ON ${tbCliente}.id_distrito = ${tbDistrito}.id`
         let params: any[] = [];
         let hasWhere = false;

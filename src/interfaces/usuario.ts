@@ -1,6 +1,3 @@
-import { Request } from "express";
-import { JwtPayload } from "jsonwebtoken";
-
 export interface Usuario {
     id: number;
     id_ruc: number;
@@ -14,8 +11,4 @@ export interface Usuario {
     clave: string;
     cod_rol: string;
     activo: string;
-}
-
-export interface RequestWithUser extends Request {
-    user: Usuario | JwtPayload;
 }

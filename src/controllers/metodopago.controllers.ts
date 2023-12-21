@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbEmpresa, tbMetodoPago } from '../func/tablas';
-import { RequestWithUser } from '../interfaces/usuario';
 
-const getAll = async (req: RequestWithUser, res: Response) => {
+const getAll = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
         const { estado } = req.query;
         //Verificar si el estado y el id_ruc son válidos
         if (!estado) {
@@ -45,9 +44,9 @@ const getAll = async (req: RequestWithUser, res: Response) => {
     }
 };
 
-const insert = async (req: RequestWithUser, res: Response) => {
+const insert = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
         const { nombre } = req.body;
 
         if (!nombre) {
@@ -90,6 +89,7 @@ const insert = async (req: RequestWithUser, res: Response) => {
 // Actualizar Metodo de Pago
 const update = async (req: Request, res: Response) => {
     try {
+        const { id_ruc } = req.body.user;
         const { id, nombre } = req.body;
 
         if (!id || !nombre) {
@@ -109,7 +109,7 @@ const update = async (req: Request, res: Response) => {
         }
 
         //Verificar si el nombre ya existe
-        const [verificarNombre]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE nombre = ? AND id != ?`, [nombre, id]);
+        const [verificarNombre]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE nombre = ? AND id != ? AND id_ruc = ?`, [nombre, id, id_ruc]);
         if (verificarNombre[0].count > 0) {
             return res.json({
                 isSuccess: false,

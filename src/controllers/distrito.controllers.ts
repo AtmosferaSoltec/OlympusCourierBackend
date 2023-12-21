@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbDistrito, tbEmpresa } from '../func/tablas';
-import { RequestWithUser } from '../interfaces/usuario';
 
-const getAllDistritos = async (req: RequestWithUser, res: Response) => {
+const getAllDistritos = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
         const { estado } = req.query;
         //Verificar si el estado
         if (!estado) {
@@ -70,9 +69,9 @@ const getDistrito = async (req: Request, res: Response) => {
     }
 };
 
-const insertDistrito = async (req: RequestWithUser, res: Response) => {
+const insertDistrito = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
         const { nombre } = req.body;
 
         if (!nombre) {
@@ -104,9 +103,9 @@ const insertDistrito = async (req: RequestWithUser, res: Response) => {
     }
 };
 
-const updateDistrito = async (req: RequestWithUser, res: Response) => {
+const updateDistrito = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
         const { id, nombre } = req.body;
 
         if (!nombre) {

@@ -1,8 +1,7 @@
-import { getClienteById, getItemsRepartoByRepartoId, getUsuarioById } from '../func/funciones';
+import { getClienteById, getComprobanteById, getItemsRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { tbCliente, tbComprobante, tbEmpresa, tbItemReparto, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
-import { RequestWithUser } from '../interfaces/usuario';
 
 /**
  * Devolver por rangos
@@ -34,16 +33,15 @@ import { RequestWithUser } from '../interfaces/usuario';
   }
  * **/
 
-const getAllRepartos = async (req: RequestWithUser, res: Response) => {
+const getAllRepartos = async (req: Request, res: Response) => {
     try {
 
-        const { id_ruc } = req.user;
-        const { estado, estado_envio, num_reparto, cliente } = req.query;
+        const { id_ruc } = req.body.user;
 
-        console.log(estado, estado_envio, num_reparto, cliente);
-
-
-        let query = `SELECT ${tbReparto}.*, ${tbComprobante}.id as id_comprobante, ${tbCliente}.nombres FROM ${tbReparto} LEFT JOIN ${tbComprobante} ON ${tbReparto}.id = ${tbComprobante}.id_reparto LEFT JOIN ${tbCliente} ON ${tbReparto}.id_cliente = ${tbCliente}.id WHERE ${tbReparto}.id_ruc = ?`
+        const { estado, estado_envio, num_reparto, cliente, desde, hasta } = req.query;
+        
+        //Traemos todos los repartos y el nombre del cliente para poder hacer un filtrado
+        let query = `SELECT ${tbReparto}.*, ${tbCliente}.nombres FROM ${tbReparto} LEFT JOIN ${tbCliente} ON ${tbReparto}.id_cliente = ${tbCliente}.id WHERE ${tbReparto}.id_ruc = ?`
         let params: any[] = [id_ruc];
 
         if (estado === 'S' || estado === 'N') {
@@ -66,28 +64,21 @@ const getAllRepartos = async (req: RequestWithUser, res: Response) => {
             params.push(`%${cliente}%`);
         }
 
+        if (desde && hasta) {
+            query += ` AND ${tbReparto}.fecha_creacion BETWEEN ? AND ?`;
+            params.push(desde, hasta);
+        }
+
         const [repartos]: any[] = await pool.query(query, params);
         const repartosConItems = await Promise.all(
             repartos.map(async (reparto: any) => {
                 return {
-                    id: reparto.id,
-                    id_ruc: reparto.id_ruc,
-                    num_reparto: reparto.num_reparto,
-                    anotacion: reparto.anotacion,
-                    clave: reparto.clave,
-                    estado: reparto.estado,
-                    fecha_creacion: reparto.fecha_creacion,
-                    fecha_entrega: reparto.fecha_entrega,
-                    id_cliente: reparto.id_cliente,
+                    ...reparto,
                     cliente: await getClienteById(reparto.id_cliente),
-                    id_usuario: reparto.id_usuario,
                     usuario: await getUsuarioById(reparto.id_usuario),
-                    id_repartidor: reparto.id_repartidor,
                     repartidor: await getUsuarioById(reparto.id_repartidor),
-                    id_comprobante: reparto.id_comprobante,
-                    url_foto: reparto?.url_foto,
+                    comprobante: await getComprobanteById(reparto.id_comprobante),
                     total: parseFloat(reparto.total),
-                    activo: reparto.activo,
                     items: await getItemsRepartoByRepartoId(reparto.id)
                 };
             })
@@ -104,11 +95,11 @@ const getAllRepartos = async (req: RequestWithUser, res: Response) => {
     }
 };
 
-const getReparto = async (req: RequestWithUser, res: Response) => {
+const getReparto = async (req: Request, res: Response) => {
 
     try {
         const id_reparto = req.params.id;
-        const { id_ruc } = req.user;
+        const { id_ruc } = req.body.user;
 
         // Verificar si se proporcionó el id_ruc y el id_reparto
         if (!id_reparto) {
@@ -119,46 +110,32 @@ const getReparto = async (req: RequestWithUser, res: Response) => {
             return;
         }
 
-        let query = `SELECT ${tbReparto}.*, ${tbComprobante}.id as id_comprobante FROM ${tbReparto} LEFT JOIN ${tbComprobante} ON ${tbReparto}.id = ${tbComprobante}.id_reparto WHERE ${tbReparto}.id_ruc = ? AND ${tbReparto}.id = ? LIMIT 1`;
+        let query = `SELECT * FROM ${tbReparto} WHERE id_ruc = ? AND id = ? LIMIT 1`;
         const [reparto]: any[] = await pool.query(query, [id_ruc, id_reparto]);
 
         if (reparto.length === 0) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'Reparto no encontrado'
+            return res.json({
+                isSuccess: true,
+                data: []
             });
-            return;
         }
 
         const repartoConItems = {
-            id: reparto[0].id,
-            id_ruc: reparto[0].id_ruc,
-            num_reparto: reparto[0].num_reparto,
-            anotacion: reparto[0].anotacion,
-            clave: reparto[0].clave,
-            estado: reparto[0].estado,
-            fecha_creacion: reparto[0].fecha_creacion,
-            fecha_entrega: reparto[0].fecha_entrega,
-            id_cliente: reparto[0].id_cliente,
+            ...reparto[0],
             cliente: await getClienteById(reparto[0].id_cliente),
-            id_usuario: reparto[0].id_usuario,
             usuario: await getUsuarioById(reparto[0].id_usuario),
-            id_repartidor: reparto[0].id_repartidor,
             repartidor: await getUsuarioById(reparto[0].id_repartidor),
-            id_comprobante: reparto[0]?.id_comprobante,
-            url_foto: reparto[0].url_foto,
             total: parseFloat(reparto[0].total),
-            activo: reparto[0].activo,
             items: await getItemsRepartoByRepartoId(reparto[0].id)
         };
         res.json({
             isSuccess: true,
             data: repartoConItems
         });
-    } catch (err) {
+    } catch (err:any) {
         res.json({
             isSuccess: false,
-            mensaje: err || 'Error desconocido'
+            mensaje: err.message
         });
     }
 };

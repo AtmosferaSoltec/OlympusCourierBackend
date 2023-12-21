@@ -2,37 +2,72 @@ import { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
 import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
-import { RequestWithUser } from '../interfaces/usuario';
 
-const listarTodos = async (req: RequestWithUser, res: Response) => {
+const listarTodos = async (req: Request, res: Response) => {
     try {
 
-        const { id_ruc } = req.user;
-
+        const { id_ruc } = req.body.user;
         const { estado, metodoPago, tipoDoc, idUser } = req.query;
         let query = `SELECT * FROM ${tbComprobante} WHERE id_ruc = ?`;
+        let params: any[] = [id_ruc];
 
-        switch (estado?.toString().toUpperCase()) {
-            case 'S':
-                query += " WHERE activo = 'S'";
-                break;
-            case 'N':
-                query += " WHERE activo = 'N'";
-                break;
-            case 'T': break;
-            default: {
-                res.json({
-                    isSuccess: false,
-                    mensaje: 'El estado no es válido'
-                })
-                return;
-            }
+        if (estado === 'S' || estado === 'N') {
+            query += ` AND activo = '${estado}'`;
+            params.push(estado);
         }
 
-        const [destinos]: any[] = await pool.query(query, [id_ruc]);
+
+        //Obtener Credenciales
+        const [credenciales]: any[] = await pool.query(`SELECT * FROM ${tbEmpresa} WHERE id = ? LIMIT 1`, [id_ruc]);
+        if (credenciales.length === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se encontraron credenciales'
+            });
+            return;
+        }
+
+        const ruta = credenciales[0].ruta;
+        const headers = {
+            'Authorization': credenciales[0].token,
+            'Content-Type': 'application/json',
+        }
+
+        const [comprobantes]: any[] = await pool.query(query, params);
+
+        //Hacer un map, para hacer una consulta a una api externa y traer el estado del comprobante
+        const comprobantesMap = await Promise.all(comprobantes.map(async (comprobante: any) => {
+            const { enlace } = comprobante;
+            const body = {
+                "operacion": "consultar_comprobante",
+                "tipo_de_comprobante": comprobante.tipo_comprobante,
+                "serie": comprobante.serie,
+                "numero": comprobante.num_serie
+            }
+            try {
+                const call = await axios.post(ruta, body, { headers: headers });
+                if (call.status !== 200) {
+                    return {
+                        ...comprobante
+                    }
+                }
+
+                const { aceptada_por_sunat, sunat_description } = call.data;
+                return {
+                    ...comprobante,
+                    nubefact: call.data
+                }
+            } catch (error) {
+                console.error('Error al consultar comprobante:', error);
+                return {
+                    ...comprobante
+                }
+            }
+        }));
+
         res.json({
             isSuccess: true,
-            data: destinos
+            data: comprobantesMap
         });
     } catch (error) {
         console.error('Error al recuperar datos de la tabla Comprobantes:', error);
@@ -72,27 +107,21 @@ const get = async (req: Request, res: Response) => {
     }
 };
 
-
-const insertar = async (req: RequestWithUser, res: Response) => {
+const insertar = async (req: Request, res: Response) => {
     try {
-        const { id_ruc, id } = req.user;
+        const { id_ruc, id } = req.body.user;
         const {
-            id_reparto, tipo_comprobante,
-            id_metodo_pago, num_operacion, foto_operacion,
-            tipo_doc, documento, nombre, direc, correo, telefono } = req.body;
+            tipo_comprobante, id_metodo_pago, num_operacion,
+            tipo_doc, documento, nombre,
+            direc, correo, telefono, repartos
+        } = req.body;
 
         // Validar que todos los campos requeridos estén presentes
-        if (!id_reparto) {
+        //Validar si el tipo de comprobante es 1 o 2
+        if (tipo_comprobante !== 1 && tipo_comprobante !== 2) {
             res.json({
                 isSuccess: false,
-                mensaje: 'El campo id_reparto es requerido'
-            });
-            return;
-        }
-        if (!tipo_comprobante) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'El campo tipo_comprobante es requerido'
+                mensaje: 'Tipo de comprobante no admitido'
             });
             return;
         }
@@ -103,20 +132,46 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             });
             return;
         }
-        if (!tipo_doc) {
+        if (tipo_doc !== 1 && tipo_doc !== 6) {
             res.json({
                 isSuccess: false,
-                mensaje: 'El campo tipo_doc es requerido'
+                mensaje: 'Tipo de documento no admitido'
             });
             return;
         }
-        if (!documento) {
+
+        if (tipo_comprobante === 1 && tipo_doc === 1) {
             res.json({
                 isSuccess: false,
-                mensaje: 'El campo documento es requerido'
+                mensaje: 'No se puede emitir una factura a una persona natural'
+            });
+            return;
+        } else if (tipo_comprobante === 2 && tipo_doc === 6) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se puede emitir una boleta a un empresa'
             });
             return;
         }
+
+        //Si el tipo de comprobante es 1, el documento debe tener 8 dígitos
+        if (tipo_doc === 1 && documento.length !== 8) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo documento debe tener 8 dígitos'
+            });
+            return;
+        }
+
+        //Si el tipo de comprobante es 2, el documento debe tener 11 dígitos
+        if (tipo_doc === 6 && documento.length !== 11) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'El campo documento debe tener 11 dígitos'
+            });
+            return;
+        }
+        //El nombre es requerido
         if (!nombre) {
             res.json({
                 isSuccess: false,
@@ -124,7 +179,8 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             });
             return;
         }
-        if (!direc) {
+        //Si el tipo de documento es 6, la dirección es requerida
+        if (tipo_doc === 6 && !direc) {
             res.json({
                 isSuccess: false,
                 mensaje: 'El campo direc es requerido'
@@ -132,27 +188,36 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             return;
         }
 
-        //Verificar que el reparto exista
-        const [verificarReparto]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbReparto} WHERE id = ?`, [id_reparto]);
-        if (verificarReparto[0].count === 0) {
+        //Verificamos si el correo es válido
+        if (correo && !correo.includes('@')) {
             res.json({
                 isSuccess: false,
-                mensaje: 'El reparto no existe'
+                mensaje: 'El campo correo no es válido'
             });
             return;
         }
 
-        //Verificar que el tipo de comprobante sea 1 o 2
-        if (tipo_comprobante !== 1 && tipo_comprobante !== 2) {
+        //Verificar si los repartos son un array y que tenga al menos un item
+        if (!Array.isArray(repartos) || repartos.length === 0) {
             res.json({
                 isSuccess: false,
-                mensaje: 'El tipo de comprobante debe ser 1 o 2'
+                mensaje: 'Debe haber al menos un reparto'
+            });
+            return;
+        }
+
+        //Verificar que los repartos existan y que los repartos no tengan id_comprobante y esten activos
+        const [verificarRepartos]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbReparto} WHERE id IN (?) AND id_comprobante IS NULL AND activo = 'S'`, [repartos]);
+        if (verificarRepartos[0].count !== repartos.length) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'Uno o más repartos no existen o ya tienen un comprobante'
             });
             return;
         }
 
         //Verificar que el metodo de pago exista
-        const [verificarMetodoPago]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbMetodoPago} WHERE id = ?`, [id_metodo_pago]);
+        const [verificarMetodoPago]: any[] = await pool.query(`SELECT COUNT(*) as count FROM ${tbMetodoPago} WHERE id = ? AND id_ruc = ?`, [id_metodo_pago, id_ruc]);
         if (verificarMetodoPago[0].count === 0) {
             res.json({
                 isSuccess: false,
@@ -161,24 +226,12 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             return;
         }
 
-        //Verificar que el tipo de documento sea 1 o 6
-        if (tipo_doc !== 1 && tipo_doc !== 6) {
+        //Traer Lista de Items de los repartos con el tipo de paquete usando left join
+        const [items]: any[] = await pool.query(`SELECT ir.*, tp.nombre as tipo_paquete FROM ${tbItemReparto} ir LEFT JOIN ${tbTipoPaquete} tp ON ir.id_tipo_paquete = tp.id WHERE ir.id_reparto IN (?)`, [repartos]);
+        if (items.length === 0) {
             res.json({
                 isSuccess: false,
-                mensaje: 'El tipo de documento debe ser 1 o 6'
-            });
-            return;
-        }
-
-        let queryItems = `SELECT ${tbItemReparto}.*, ${tbTipoPaquete}.nombre as tipo_paquete FROM ${tbItemReparto} LEFT JOIN ${tbTipoPaquete} ON ${tbItemReparto}.id_tipo_paquete = ${tbTipoPaquete}.id WHERE ${tbItemReparto}.id_reparto = ?`;
-
-        //Traer Lista de Items del Reparto con tipo de paquete
-        const [items]: any[] = await pool.query(queryItems, [id_reparto]);
-
-        if (items.length == 0) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'Debe haber al menos un item'
+                mensaje: 'No se encontraron items'
             });
             return;
         }
@@ -210,16 +263,17 @@ const insertar = async (req: RequestWithUser, res: Response) => {
                 "anticipo_documento_numero": ""
             })
         });
+
         let total = itemsNubefact.reduce((total, currentItem) => total + Number(currentItem.total), 0);
         total = +(total.toFixed(4)); // limita a 4 decimales
 
         let montoBase = total / 1.18;
         montoBase = +(montoBase.toFixed(4)); // limita a 4 decimales
 
-        let mongoIgv = total - montoBase;
-        mongoIgv = +(mongoIgv.toFixed(4));
+        let montoIgv = total - montoBase;
+        montoIgv = +(montoIgv.toFixed(4));
 
-        if (+(montoBase + mongoIgv).toFixed(4) !== total) {
+        if (+(montoBase + montoIgv).toFixed(4) !== total) {
             console.log('La suma de montoBase e igv no es igual a total');
         }
 
@@ -233,22 +287,27 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             return;
         }
 
+
         const ruta = credenciales[0].ruta;
         const token = credenciales[0].token;
         let serie: string;
         let num_serie: string;
-        if (tipo_comprobante === 1) {
-            serie = credenciales[0].serie_f;
-            num_serie = credenciales[0].num_f + 1;
-        } else if (tipo_comprobante === 2) {
-            serie = credenciales[0].serie_b;
-            num_serie = credenciales[0].num_b + 1;
-        } else {
-            res.json({
-                isSuccess: false,
-                mensaje: 'El tipo de comprobante no es válido'
-            });
-            return;
+
+        switch (tipo_comprobante) {
+            case 1:
+                serie = credenciales[0].serie_f;
+                num_serie = credenciales[0].num_f + 1;
+                break;
+            case 2:
+                serie = credenciales[0].serie_b;
+                num_serie = credenciales[0].num_b + 1;
+                break;
+            default:
+                res.json({
+                    isSuccess: false,
+                    mensaje: 'Tipo de comprobante no admitido'
+                });
+                return;
         }
 
         const data = {
@@ -275,7 +334,7 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             "total_gravada": montoBase,
             "total_inafecta": "",
             "total_exonerada": "",
-            "total_igv": mongoIgv,
+            "total_igv": montoIgv,
             "total_gratuita": "",
             "total_otros_cargos": "",
             "total": total,
@@ -309,51 +368,65 @@ const insertar = async (req: RequestWithUser, res: Response) => {
             "venta_al_credito": []
         }
 
-        const call = await axios.post(
-            ruta,
-            data,
-            {
-                headers: {
-                    'Authorization': token,
-                    'Content-Type': 'application/json',
-                }
+        try {
+            const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
+            if (call.status !== 200) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: call.data?.errors
+                });
             }
-        )
-
-        if (call.status !== 200) {
+        } catch (error: any) {
+            console.error('Error al insertar comprobante:', error);
             res.json({
                 isSuccess: false,
-                mensaje: call.data?.errors
+                mensaje: error.message
             });
             return;
         }
 
-        const { enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr } = call.data;
-        const query = `INSERT INTO ${tbComprobante} (id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, enlace, url_pdf, url_xml, url_cdr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        const [result]: any[] = await pool.query(query, [id_reparto, id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, foto_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id, enlace, enlace_del_pdf, enlace_del_xml, enlace_del_cdr]);
-
-        //Subir Contador
-        const queryContador = `UPDATE ${tbEmpresa} SET num_${tipo_comprobante === 1 ? 'f' : 'b'} = ? WHERE id = ?`
-        const [resContador]: any[] = await pool.query(queryContador, [num_serie, id_ruc])
-
-        if (result.affectedRows === 1 && resContador.affectedRows === 1) {
-            res.json({
-                isSuccess: true,
-                mensaje: 'Comprobante insertado correctamente'
-            });
-        } else {
-            res.json({
+        const query = `INSERT INTO ${tbComprobante} (id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        const [result]: any[] = await pool.query(query, [id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id]);
+        if (result.affectedRows !== 1) {
+            return res.json({
                 isSuccess: false,
                 mensaje: 'Error al insertar comprobante'
             })
         }
 
+        //Subir Contador en la tabla empresa
+        const queryContador = `UPDATE ${tbEmpresa} SET num_${tipo_comprobante === 1 ? 'f' : 'b'} = ? WHERE id = ?`
+        const [resContador]: any[] = await pool.query(queryContador, [num_serie, id_ruc])
+        if (resContador.affectedRows !== 1) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Error al actualizar contador'
+            })
+        }
+
+        //Actualizar los repartos con el id_comprobante
+        const queryRepartos = `UPDATE ${tbReparto} SET id_comprobante = ? WHERE id IN (?)`
+        const [resRepartos]: any[] = await pool.query(queryRepartos, [result.insertId, repartos])
+        if (resRepartos.affectedRows !== repartos.length) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Error al actualizar repartos'
+            })
+        }
+
+        //Comprobante Insertado
+        res.json({
+            isSuccess: true,
+            mensaje: 'Comprobante insertado'
+        });
+
+
     } catch (error: any) {
         if (error.response && error.response.status === 400) {
             const mensajeError = error.response.data?.errors ?? "Error al insertar comprobante";
-            res.json({ isSuccess: false, mensaje: mensajeError });
+            return res.json({ isSuccess: false, mensaje: mensajeError });
         } else {
-            res.json({ isSuccess: false, mensaje: error.message });
+            return res.json({ isSuccess: false, mensaje: error.message });
         }
     }
 
