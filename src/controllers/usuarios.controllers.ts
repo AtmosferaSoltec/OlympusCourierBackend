@@ -120,10 +120,11 @@ const getUsuario = async (req: Request, res: Response) => {
 const insertUsuario = async (req: Request, res: Response) => {
     try {
 
-        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol, id_ruc } = req.body;
+        const { id_ruc } = req.body.user;
+        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol } = req.body;
 
         // Validar si los campos estan vacios
-        if (!documento || !nombres || !ape_paterno || !clave || !cod_rol || !id_ruc) {
+        if (!documento || !nombres || !clave || !cod_rol) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Por favor, proporciona todos los campos.'
@@ -165,15 +166,6 @@ const insertUsuario = async (req: Request, res: Response) => {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El rol no existe'
-            })
-        }
-
-        //Validar si el id_ruc existe
-        const [idRucExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
-        if (idRucExistente[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El ruc no existe'
             })
         }
 
