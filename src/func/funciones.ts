@@ -1,5 +1,5 @@
 import { pool } from '../db';
-import { tbCliente, tbComprobante, tbDistrito, tbItemReparto, tbReparto, tbTipoDoc, tbTipoPaquete, tbUsuario } from './tablas';
+import { tbCliente, tbComprobante, tbDistrito, tbHistorialReparto, tbItemReparto, tbTipoDoc, tbTipoOperacion, tbTipoPaquete, tbUsuario } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
@@ -85,6 +85,16 @@ export const getItemsRepartoByRepartoId = async (id: number) => {
     try {
         const [items]: any[] = await pool.query(`SELECT ir.*, tp.nombre as tipo_paquete FROM ${tbItemReparto} ir LEFT JOIN ${tbTipoPaquete} tp ON ir.id_tipo_paquete = tp.id WHERE id_reparto = ?`, [id]);
         return items;
+    } catch (error) {
+        console.log(error);
+        return []
+    }
+};
+
+export const getMovimientosRepartoByRepartoId = async (id: number) => {
+    try {
+        const [movimientos]: any[] = await pool.query(`SELECT th.*, tu.nombres as nombre, tt.nombre as tipo_operacion FROM ${tbHistorialReparto} th LEFT JOIN ${tbUsuario} tu ON th.id_usuario = tu.id LEFT JOIN ${tbTipoOperacion} tt ON th.id_tipo_operacion = tt.id WHERE id_reparto = ?`, [id]);
+        return movimientos;
     } catch (error) {
         console.log(error);
         return []

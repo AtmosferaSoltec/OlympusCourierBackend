@@ -8,31 +8,31 @@ const listarTodos = async (req: Request, res: Response) => {
         const { id_ruc } = req.body.user;
         const { serie, comprobante, cliente, desde, hasta, tipo_comprobante, activo, id_metodo_pago } = req.query;
 
-        let query = `SELECT * FROM ${tbComprobante} WHERE id_ruc = ?`;
+        let query = `SELECT tc.*, tu.nombres as usuario, tm.nombre as metodo_pago FROM ${tbComprobante} tc LEFT JOIN ${tbUsuario} tu ON tc.id_usuario = tu.id LEFT JOIN ${tbMetodoPago} tm ON tc.id_metodo_pago = tm.id WHERE tc.id_ruc = ?`;
         let params: any[] = [id_ruc];
 
         if (serie) {
-            query += ` AND serie = ?`;
+            query += ` AND tc.serie = ?`;
             params.push(serie);
         }
 
         if (comprobante) {
-            query += ` AND num_serie = ?`;
+            query += ` AND tc.num_serie = ?`;
             params.push(comprobante);
         }
 
         if (cliente) {
-            query += ` AND nombre LIKE ?`;
+            query += ` AND tc.nombre LIKE ?`;
             params.push(`%${cliente}%`);
         }
 
         if (desde && hasta) {
-            query += ` AND fecha_creacion BETWEEN ? AND ?`;
+            query += ` AND tc.fecha_creacion BETWEEN ? AND ?`;
             params.push(desde, hasta);
         }
 
         if (tipo_comprobante === '1' || tipo_comprobante === '2') {
-            query += ` AND tipo_comprobante = ?`;
+            query += ` AND tc.tipo_comprobante = ?`;
             params.push(tipo_comprobante);
         }
 
@@ -40,25 +40,25 @@ const listarTodos = async (req: Request, res: Response) => {
             const queryMetodoPago = `SELECT * FROM ${tbMetodoPago} WHERE id = ? AND id_ruc = ? LIMIT 1`
             const [callMetodoPago]: any[] = await pool.query(queryMetodoPago, [id_metodo_pago, id_ruc]);
             if (callMetodoPago.length > 0) {
-                query += ` AND id_metodo_pago = ?`;
+                query += ` AND tc.id_metodo_pago = ?`;
                 params.push(id_metodo_pago);
             }
         }
 
         if (activo === 'S' || activo === 'N') {
-            query += ` AND activo = '${activo}'`;
+            query += ` AND tc.activo = '${activo}'`;
             params.push(activo);
         }
 
-        
+
         // Ordenar por fecha de creación
-        query += ` ORDER BY ${tbComprobante}.fecha_creacion DESC`;
+        query += ` ORDER BY tc.fecha_creacion DESC`;
 
         //Maximo 50 repartos
         query += ` LIMIT 50`;
 
         const [comprobantes]: any[] = await pool.query(query, params);
-        
+
 
         return res.json({
             isSuccess: true,
@@ -375,6 +375,43 @@ const insertar = async (req: Request, res: Response) => {
                     mensaje: call.data?.errors
                 });
             }
+            const { enlace_del_pdf, enlace_del_xml, sunat_description } = call.data;
+            const query = `INSERT INTO ${tbComprobante} (id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario, sunat_descrip, enlace_pdf, enlace_xml, importe_total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+            const [result]: any[] = await pool.query(query, [id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id, sunat_description, enlace_del_pdf, enlace_del_xml, total]);
+            if (result.affectedRows !== 1) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: 'Error al insertar comprobante'
+                })
+            }
+
+
+            //Subir Contador en la tabla empresa
+            const queryContador = `UPDATE ${tbEmpresa} SET num_${tipo_comprobante === 1 ? 'f' : 'b'} = ? WHERE id = ?`
+            const [resContador]: any[] = await pool.query(queryContador, [num_serie, id_ruc])
+            if (resContador.affectedRows !== 1) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: 'Error al actualizar contador'
+                })
+            }
+
+            //Actualizar los repartos con el id_comprobante
+            const queryRepartos = `UPDATE ${tbReparto} SET id_comprobante = ? WHERE id IN (?)`
+            const [resRepartos]: any[] = await pool.query(queryRepartos, [result.insertId, repartos])
+            if (resRepartos.affectedRows !== repartos.length) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: 'Error al actualizar repartos'
+                })
+            }
+
+            //Comprobante Insertado
+            res.json({
+                isSuccess: true,
+                mensaje: 'Comprobante insertado'
+            });
+
         } catch (error: any) {
             console.error('Error al insertar comprobante:', error);
             res.json({
@@ -383,41 +420,6 @@ const insertar = async (req: Request, res: Response) => {
             });
             return;
         }
-
-        const query = `INSERT INTO ${tbComprobante} (id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id_usuario) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        const [result]: any[] = await pool.query(query, [id_ruc, tipo_comprobante, serie, num_serie, id_metodo_pago, num_operacion, tipo_doc, documento, nombre, direc, correo, telefono, id]);
-        if (result.affectedRows !== 1) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'Error al insertar comprobante'
-            })
-        }
-
-        //Subir Contador en la tabla empresa
-        const queryContador = `UPDATE ${tbEmpresa} SET num_${tipo_comprobante === 1 ? 'f' : 'b'} = ? WHERE id = ?`
-        const [resContador]: any[] = await pool.query(queryContador, [num_serie, id_ruc])
-        if (resContador.affectedRows !== 1) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'Error al actualizar contador'
-            })
-        }
-
-        //Actualizar los repartos con el id_comprobante
-        const queryRepartos = `UPDATE ${tbReparto} SET id_comprobante = ? WHERE id IN (?)`
-        const [resRepartos]: any[] = await pool.query(queryRepartos, [result.insertId, repartos])
-        if (resRepartos.affectedRows !== repartos.length) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'Error al actualizar repartos'
-            })
-        }
-
-        //Comprobante Insertado
-        res.json({
-            isSuccess: true,
-            mensaje: 'Comprobante insertado'
-        });
 
 
     } catch (error: any) {
@@ -439,8 +441,97 @@ const getFechaEmision = () => {
     return `${dia}-${mes}-${anio}`;
 }
 
-const actualizar = (req: Request, res: Response) => {
+const anular = async (req: Request, res: Response) => {
+    try {
+        const { id_comprobante, motivo } = req.body;
 
+        if (!id_comprobante) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Se requiere del id_comprobante'
+            })
+        }
+
+        const query = `SELECT * FROM ${tbComprobante} WHERE id = ? LIMIT 1`;
+        const [comprobante]: any[] = await pool.query(query, [id_comprobante]);
+        if (comprobante.length === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El comprobante no existe'
+            })
+        }
+
+        //Obtener Credenciales
+        const [credenciales]: any[] = await pool.query(`SELECT * FROM ${tbEmpresa} WHERE id = ? LIMIT 1`, [comprobante[0].id_ruc]);
+        if (credenciales.length === 0) {
+            res.json({
+                isSuccess: false,
+                mensaje: 'No se encontraron credenciales'
+            });
+            return;
+        }
+
+        const ruta = credenciales[0].ruta;
+        const token = credenciales[0].token;
+
+        const data = {
+            "operacion": "generar_anulacion",
+            "tipo_de_comprobante": comprobante[0].tipo_comprobante,
+            "serie": comprobante[0].serie,
+            "numero": comprobante[0].num_serie,
+            "motivo": motivo || "ANULACION POR ERROR"
+        }
+
+        try {
+            const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
+            if (call.status !== 200) {
+                console.log('Error al anular comprobante:', call.data);
+
+                return res.json({
+                    isSuccess: false,
+                    mensaje: call.data?.errors
+                });
+            } else {
+                const queryAnular = `UPDATE ${tbComprobante} SET activo = 'N' WHERE id = ?`
+                const [resAnular]: any[] = await pool.query(queryAnular, [id_comprobante])
+                if (resAnular.affectedRows !== 1) {
+                    return res.json({
+                        isSuccess: false,
+                        mensaje: 'Error al anular comprobante'
+                    })
+                }
+
+                //Anular el id_comprobante en los repartos
+                const queryRepartos = `UPDATE ${tbReparto} SET id_comprobante = NULL WHERE id_comprobante = ?`
+                const [resRepartos]: any[] = await pool.query(queryRepartos, [id_comprobante])
+                if (resRepartos.affectedRows !== 1) {
+                    return res.json({
+                        isSuccess: false,
+                        mensaje: 'Error al anular repartos'
+                    })
+                }
+
+                return res.json({
+                    isSuccess: true,
+                    mensaje: 'Comprobante anulado'
+                });
+            }
+        } catch (error: any) {
+            console.log('Error al anular comprobante:', error);
+
+            res.json({
+                isSuccess: false,
+                mensaje: error.message
+            });
+            return;
+        }
+
+    } catch (error: any) {
+        return res.json({
+            isSuccess: false,
+            mensaje: error.message
+        });
+    }
 };
 
 const setActivoComprobante = async (req: Request, res: Response) => {
@@ -482,6 +573,6 @@ export default {
     listarTodos,
     get,
     insertar,
-    actualizar,
+    anular,
     setActivoComprobante
 }

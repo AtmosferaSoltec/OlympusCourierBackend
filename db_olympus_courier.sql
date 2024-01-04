@@ -93,6 +93,8 @@ CREATE TABLE usuario (
   FOREIGN KEY (cod_rol) REFERENCES rol(cod)
 );
 
+
+
 CREATE TABLE reparto (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_ruc INT,
@@ -103,17 +105,36 @@ CREATE TABLE reparto (
   fecha_creacion TIMESTAMP DEFAULT NOW(),
   fecha_entrega TIMESTAMP,
   id_cliente INT NOT NULL,
-  id_usuario INT NOT NULL,
-  id_repartidor INT,
   url_foto VARCHAR(500),
   total DECIMAL(10, 2),
   activo CHAR(1) DEFAULT 'S',
   id_comprobante INT,
   FOREIGN KEY (id_cliente) REFERENCES cliente(id),
-  FOREIGN KEY (id_usuario) REFERENCES usuario(id),
-  FOREIGN KEY (id_repartidor) REFERENCES usuario(id),
   FOREIGN KEY (id_ruc) REFERENCES empresa(id),
   FOREIGN KEY (id_comprobante) REFERENCES comprobante(id)
+);
+
+CREATE TABLE tipo_operacion(
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(20)
+);
+
+INSERT INTO tipo_operacion(nombre) VALUES
+('Crear'),
+('Eliminar'),
+('Restaurar'),
+('Entregar')
+;
+
+CREATE TABLE historial_reparto(
+	 id INT AUTO_INCREMENT PRIMARY KEY,
+     id_reparto INT NOT NULL,
+     id_usuario INT NOT NULL,
+     id_tipo_operacion INT,
+     fecha TIMESTAMP DEFAULT NOW(),
+     FOREIGN KEY (id_reparto) REFERENCES reparto(id),
+     FOREIGN KEY (id_usuario) REFERENCES usuario(id),
+     FOREIGN KEY (id_tipo_operacion) REFERENCES tipo_operacion(id)
 );
 
 CREATE TABLE item_reparto (

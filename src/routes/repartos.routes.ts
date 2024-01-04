@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', checkAuth, controller.getAllRepartos);
 router.get('/:id', checkAuth, controller.getReparto);
 router.post('/', checkAuth, controller.insertReparto);
-router.patch('/:id', checkAuth, controller.setActivoReparto);
+router.patch('/:id_reparto', checkAuth, controller.setActivoReparto);
 router.post('/darConformidad', checkAuth, controller.darConformidad)
 
 export { router };

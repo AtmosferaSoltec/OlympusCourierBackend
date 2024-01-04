@@ -4,7 +4,7 @@ import { tbEmpresa } from '../func/tablas';
 
 const get = async (req: Request, res: Response) => {
     try {
-        const { id_ruc } = req.query;
+        const { id_ruc } = req.body.user;
 
         if (!id_ruc) {
             return res.json({

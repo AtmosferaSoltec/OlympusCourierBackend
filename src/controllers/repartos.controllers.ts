@@ -1,14 +1,14 @@
-import { getClienteById, getComprobanteById, getItemsRepartoByRepartoId, getUsuarioById } from '../func/funciones';
+import { getClienteById, getComprobanteById, getItemsRepartoByRepartoId, getMovimientosRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbCliente, tbComprobante, tbEmpresa, tbItemReparto, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
+import { tbCliente, tbEmpresa, tbHistorialReparto, tbItemReparto, tbReparto, tbTipoPaquete } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
 
         const { id_ruc } = req.body.user;
 
-        const { estado, estado_envio, num_reparto, cliente, desde, hasta } = req.query;        
+        const { estado, estado_envio, num_reparto, cliente, desde, hasta } = req.query;
 
         //Traemos todos los repartos y el nombre del cliente para poder hacer un filtrado
         let query = `SELECT tr.*, tc.nombres FROM ${tbReparto} tr LEFT JOIN ${tbCliente} tc ON tr.id_cliente = tc.id WHERE tr.id_ruc = ?`
@@ -51,11 +51,10 @@ const getAllRepartos = async (req: Request, res: Response) => {
                 return {
                     ...reparto,
                     cliente: await getClienteById(reparto.id_cliente),
-                    usuario: await getUsuarioById(reparto.id_usuario),
-                    repartidor: await getUsuarioById(reparto.id_repartidor),
                     comprobante: await getComprobanteById(reparto.id_comprobante),
                     total: parseFloat(reparto.total),
-                    items: await getItemsRepartoByRepartoId(reparto.id)
+                    items: await getItemsRepartoByRepartoId(reparto.id),
+                    historial: await getMovimientosRepartoByRepartoId(reparto.id)
                 };
             })
         );
@@ -99,12 +98,12 @@ const getReparto = async (req: Request, res: Response) => {
         const repartoConItems = {
             ...reparto[0],
             cliente: await getClienteById(reparto[0].id_cliente),
-            usuario: await getUsuarioById(reparto[0].id_usuario),
-            repartidor: await getUsuarioById(reparto[0].id_repartidor),
+            comprobante: await getComprobanteById(reparto[0].id_comprobante),
             total: parseFloat(reparto[0].total),
-            items: await getItemsRepartoByRepartoId(reparto[0].id)
+            items: await getItemsRepartoByRepartoId(reparto[0].id),
+            historial: await getMovimientosRepartoByRepartoId(reparto[0].id)
         };
-        res.json({
+        return res.json({
             isSuccess: true,
             data: repartoConItems
         });
@@ -122,29 +121,12 @@ const insertReparto = async (req: Request, res: Response) => {
         const { anotacion, clave, id_cliente, items } = req.body;
 
         //Verificar si todos los campos fueron proporcionados
-        if (!id_cliente || !items) {
+        if (!id_cliente || !items || !clave) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Faltan campos requeridos, por favor verifique.'
             });
         }
-
-        if(!clave){
-            return res.json({
-                isSuccess: false,
-                mensaje: 'Falta la clave'
-            });
-        }
-
-        //Verificar si el cliente existe
-        const [clienteRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE id = ?`, [id_cliente]);
-        if (clienteRows[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: `El cliente con ID: ${id_cliente} no existe`
-            });
-        }
-
         //Verificar si los items son una lista de objetos
         if (!Array.isArray(items) || items.some(item => typeof item !== 'object')) {
             return res.json({
@@ -167,19 +149,38 @@ const insertReparto = async (req: Request, res: Response) => {
             }
         });
 
+        //Verificar si el cliente existe
+        const [clienteRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE id = ?`, [id_cliente]);
+        if (clienteRows[0].count === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El cliente con ID: ${id_cliente} no existe`
+            });
+        }
+
+
         // Obtener el num_reparto actual de la tabla empresa usando el ruc
         const [empresasRows]: any[] = await pool.query(`SELECT num_reparto FROM ${tbEmpresa} WHERE id = ? LIMIT 1`, [id_ruc]);
-        const num_reparto_empresa = empresasRows[0].num_reparto;
+        const nuevo_num_reparto = empresasRows[0].num_reparto + 1;
 
-        const nuevo_num_reparto = num_reparto_empresa + 1;
-
-        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?,?)`;
-        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, id_cliente, id, total]);
+        // Insertar el reparto
+        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, id_cliente, total) VALUES (?,?,?,?,?,?)`;
+        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, id_cliente, total]);
 
         if (repartoResult.affectedRows !== 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'No se pudo insertar'
+            });
+        }
+
+        //Insertar el movimiento
+        const movimientoQuery = `INSERT INTO ${tbHistorialReparto} (id_reparto, id_usuario, id_tipo_operacion) VALUES (?,?,?)`;
+        const [movimientoResult]: any[] = await pool.query(movimientoQuery, [repartoResult.insertId, id, 1]);
+        if (movimientoResult.affectedRows !== 1) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo insertar el movimiento'
             });
         }
 
@@ -230,7 +231,8 @@ const insertReparto = async (req: Request, res: Response) => {
 
 const setActivoReparto = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
+        const { id } = req.body.user;
+        const { id_reparto } = req.params;
         const { activo } = req.body;
 
         if (!activo) {
@@ -240,36 +242,65 @@ const setActivoReparto = async (req: Request, res: Response) => {
             })
         }
 
-        if (isNaN(Number(id))) {
+        if (isNaN(Number(id_reparto))) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El ID proporcionado no es numérico'
             });
         }
 
-        // Verificar la existencia del reparto
-        const [repartoRows]: any[] = await pool.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id]);
-        if (repartoRows.length === 0) {
+        //Verificar si el activo es S o N
+        if (activo !== 'S' && activo !== 'N') {
             return res.json({
                 isSuccess: false,
-                mensaje: `El ID: ${id} no existe`
+                mensaje: 'El activo debe ser S o N'
             });
         }
 
-        // Eliminar los items relacionados al reparto
-        const [updateResult]: any[] = await pool.query(`UPDATE ${tbReparto} SET activo = ? WHERE id = ?`, [activo, id]);
-        if (updateResult.affectedRows === 1) {
-           return res.json({
-                isSuccess: true,
-                mensaje: 'Activo actualizado'
+        // Verificar la existencia del reparto
+        const [repartoRows]: any[] = await pool.query(`SELECT * FROM ${tbReparto} WHERE id = ?`, [id_reparto]);
+        if (repartoRows.length === 0) {
+            return res.json({
+                isSuccess: false,
+                mensaje: `El ID: ${id_reparto} no existe`
             });
-        } else {
+        }
+
+        // Actualizar el activo
+        const [updateResult]: any[] = await pool.query(`UPDATE ${tbReparto} SET activo = ? WHERE id = ?`, [activo, id_reparto]);
+        if (updateResult.affectedRows !== 1) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'No se pudo actualizar el activo'
             });
-        };
-    } catch (err:any) {
+        }
+
+        let id_tipo_operacion;
+        switch (activo) {
+            case 'S':
+                id_tipo_operacion = 3;
+                break;
+            case 'N':
+                id_tipo_operacion = 2;
+                break;
+        }
+
+        //Insertar el movimiento
+        const movimientoQuery = `INSERT INTO ${tbHistorialReparto} (id_reparto, id_usuario, id_tipo_operacion) VALUES (?,?,?)`;
+        const [movimientoResult]: any[] = await pool.query(movimientoQuery, [id_reparto, id, id_tipo_operacion]);
+        if (movimientoResult.affectedRows !== 1) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo insertar el movimiento'
+            });
+        }
+
+        return res.json({
+            isSuccess: true,
+            mensaje: 'Activo actualizado'
+        });
+
+    } catch (err: any) {
         return res.json({
             isSuccess: false,
             mensaje: err.message
@@ -279,25 +310,36 @@ const setActivoReparto = async (req: Request, res: Response) => {
 
 const darConformidad = async (req: Request, res: Response) => {
     try {
-        const { id_reparto, id_usuario, url_foto } = req.body;
+        const { id } = req.body.user;
+        const { id_reparto, url_foto } = req.body;
 
         // Obtener la fecha actual en formato YYYY-MM-DD HH:mm:ss
         const fechaActual = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-        const query = `UPDATE ${tbReparto} SET estado = ?, fecha_entrega = ?, id_repartidor = ?, url_foto = ? WHERE id = ?`;
-        const [result]: any[] = await pool.query(query, ['E', fechaActual, id_usuario, url_foto, id_reparto]);
+        const query = `UPDATE ${tbReparto} SET estado = ?, fecha_entrega = ?, url_foto = ? WHERE id = ?`;
+        const [result]: any[] = await pool.query(query, ['E', fechaActual, url_foto, id_reparto]);
 
-        if (result.affectedRows > 0) {
-            res.json({
-                isSuccess: true,
-                mensaje: 'Conformidad registrada con éxito'
-            });
-        } else {
-            res.status(404).json({
+        if (result.affectedRows !== 1) {
+            return res.json({
                 isSuccess: false,
                 mensaje: 'No se encontró el reparto con el ID proporcionado'
             });
         }
+
+        //Insertar el movimiento
+        const movimientoQuery = `INSERT INTO ${tbHistorialReparto} (id_reparto, id_usuario, id_tipo_operacion) VALUES (?,?,?)`;
+        const [movimientoResult]: any[] = await pool.query(movimientoQuery, [id_reparto, id, 4]);
+        if (movimientoResult.affectedRows !== 1) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo insertar el movimiento'
+            });
+        }
+
+        return res.json({
+            isSuccess: true,
+            mensaje: 'Conformidad registrada con éxito'
+        });
     } catch (err) {
         res.json({
             isSuccess: false,
