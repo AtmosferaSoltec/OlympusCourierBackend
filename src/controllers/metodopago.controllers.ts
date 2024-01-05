@@ -14,6 +14,8 @@ const getAll = async (req: Request, res: Response) => {
             });
         }
 
+
+
         let query = `SELECT * FROM ${tbMetodoPago} WHERE id_ruc = ?`;
         switch (estado?.toString().toUpperCase()) {
             case 'S':
@@ -32,6 +34,7 @@ const getAll = async (req: Request, res: Response) => {
             }
         }
         const [call]: any[] = await pool.query(query, [id_ruc]);
+  
         res.json({
             isSuccess: true,
             data: call

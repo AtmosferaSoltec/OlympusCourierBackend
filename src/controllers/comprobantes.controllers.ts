@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
-import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
+import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbPendientesAnulacion, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
@@ -105,11 +105,14 @@ const insertar = async (req: Request, res: Response) => {
     try {
         const { id_ruc, id } = req.body.user;
 
+
         const {
             tipo_comprobante, id_metodo_pago, num_operacion,
             tipo_doc, documento, nombre,
             direc, correo, telefono, repartos
         } = req.body;
+
+        console.log(id_metodo_pago);
 
         // Validar que todos los campos requeridos estén presentes
         //Validar si el tipo de comprobante es 1 o 2
@@ -242,7 +245,7 @@ const insertar = async (req: Request, res: Response) => {
 
             itemsNubefact.push({
                 "unidad_de_medida": "ZZ",
-                "codigo": item.id,
+                "codigo": item.id_reparto,
                 "codigo_producto_sunat": "",
                 "descripcion": `Servicio de transporte de ${item.cant} (${item.tipo_paquete})`,
                 "cantidad": 1,
@@ -452,6 +455,14 @@ const anular = async (req: Request, res: Response) => {
             })
         }
 
+        if (!motivo) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Se requiere del motivo'
+            })
+        }
+
+        //Verificar que el comprobante exista
         const query = `SELECT * FROM ${tbComprobante} WHERE id = ? LIMIT 1`;
         const [comprobante]: any[] = await pool.query(query, [id_comprobante]);
         if (comprobante.length === 0) {
@@ -471,68 +482,82 @@ const anular = async (req: Request, res: Response) => {
             return;
         }
 
-        const ruta = credenciales[0].ruta;
-        const token = credenciales[0].token;
+        const { ruta, token } = credenciales[0];
+        const { tipo_comprobante, serie, num_serie } = comprobante[0];
 
-        const data = {
-            "operacion": "generar_anulacion",
-            "tipo_de_comprobante": comprobante[0].tipo_comprobante,
-            "serie": comprobante[0].serie,
-            "numero": comprobante[0].num_serie,
-            "motivo": motivo || "ANULACION POR ERROR"
-        }
-
-        try {
-            const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
-            if (call.status !== 200) {
-                console.log('Error al anular comprobante:', call.data);
-
-                return res.json({
-                    isSuccess: false,
-                    mensaje: call.data?.errors
-                });
-            } else {
-                const queryAnular = `UPDATE ${tbComprobante} SET activo = 'N' WHERE id = ?`
-                const [resAnular]: any[] = await pool.query(queryAnular, [id_comprobante])
-                if (resAnular.affectedRows !== 1) {
-                    return res.json({
-                        isSuccess: false,
-                        mensaje: 'Error al anular comprobante'
-                    })
-                }
-
-                //Anular el id_comprobante en los repartos
-                const queryRepartos = `UPDATE ${tbReparto} SET id_comprobante = NULL WHERE id_comprobante = ?`
-                const [resRepartos]: any[] = await pool.query(queryRepartos, [id_comprobante])
-                if (resRepartos.affectedRows !== 1) {
-                    return res.json({
-                        isSuccess: false,
-                        mensaje: 'Error al anular repartos'
-                    })
-                }
-
-                return res.json({
-                    isSuccess: true,
-                    mensaje: 'Comprobante anulado'
-                });
-            }
-        } catch (error: any) {
-            console.log('Error al anular comprobante:', error);
-
-            res.json({
+        //Insertar en la tabla pendientes_anular_comprobantes
+        const queryPendientes = `INSERT INTO ${tbPendientesAnulacion} (tipo_comprobante, serie, num_serie, motivo, ruta, token, id_empresa) VALUES (?,?,?,?,?,?,?)`;
+        const [resPendientes]: any[] = await pool.query(queryPendientes, [tipo_comprobante, serie, num_serie, motivo, ruta, token, comprobante[0].id_ruc]);
+        if (resPendientes.affectedRows !== 1) {
+            return res.json({
                 isSuccess: false,
-                mensaje: error.message
-            });
-            return;
+                mensaje: 'Error al insertar pendiente'
+            })
         }
+
+        //Anular el comprobante
+        const queryAnular = `UPDATE ${tbComprobante} SET activo = 'N' WHERE id = ?`
+        const [resAnular]: any[] = await pool.query(queryAnular, [id_comprobante])
+        if (resAnular.affectedRows !== 1) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Error al anular comprobante'
+            })
+        }
+
+        //Anular el id_comprobante en los repartos
+        const queryRepartos = `UPDATE ${tbReparto} SET id_comprobante = NULL WHERE id_comprobante = ?`
+        const [resRepartos]: any[] = await pool.query(queryRepartos, [id_comprobante])
+        if (resRepartos.affectedRows !== 1) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Error al anular repartos'
+            })
+        }
+
+        return res.json({
+            isSuccess: true,
+            mensaje: 'Comprobante anulado'
+        });
+
 
     } catch (error: any) {
+        console.log('Error al anular comprobante:', error);
         return res.json({
             isSuccess: false,
             mensaje: error.message
         });
     }
 };
+/*
+const anularSunat = async () => {
+    const data = {
+        "operacion": "generar_anulacion",
+        "tipo_de_comprobante": tipo_comprobante,
+        "serie": serie,
+        "numero": num_serie,
+        "motivo": motivo || "ANULACION POR ERROR"
+    }
+
+    try {
+        const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
+        if (call.status !== 200) {
+            return res.json({
+                isSuccess: false,
+                mensaje: call.data?.errors
+            });
+        } else {
+        }
+    } catch (error: any) {
+        console.log('Error al anular comprobante:', error);
+
+        res.json({
+            isSuccess: false,
+            mensaje: error.message
+        });
+        return;
+    }
+};*/
 
 const setActivoComprobante = async (req: Request, res: Response) => {
     const id = req.params.id;

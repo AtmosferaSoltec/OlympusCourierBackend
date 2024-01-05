@@ -12,3 +12,4 @@ export const tbMetodoPago = 'metodo_pago';
 export const tbTipoPaquete = 'tipo_paquete';
 export const tbRol = 'rol';
 export const tbEmpresa = 'empresa';
+export const tbPendientesAnulacion = 'pendientes_anular_comprobantes';

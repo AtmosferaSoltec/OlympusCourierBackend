@@ -12,11 +12,6 @@ app.use(cors());
 app.use(express.json())
 app.use('/api', router);
 
-app.get('/ping', (req: Request, res: Response) => {
-    res.json({
-        mensaje: 'pong'
-    })
-});
 
 app.use((req, res, next) => {
     if (!req.secure) {

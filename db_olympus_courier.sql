@@ -80,8 +80,7 @@ CREATE TABLE usuario (
   id_ruc INT,
   documento VARCHAR(20) UNIQUE NOT NULL,
   nombres VARCHAR(255) NOT NULL,
-  ape_paterno VARCHAR(255),
-  ape_materno VARCHAR(255),
+  apellidos VARCHAR(255),
   telefono VARCHAR(15) UNIQUE,
   correo VARCHAR(255) UNIQUE,
   fecha_nac DATE,
@@ -173,6 +172,20 @@ CREATE TABLE comprobante (
   FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id),
   FOREIGN KEY (id_usuario) REFERENCES usuario(id),
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+);
+
+CREATE TABLE pendientes_anular_comprobantes (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_comprobante CHAR(1),
+    serie CHAR(4),
+    num_serie INT,
+    motivo VARCHAR(50),
+    ruta VARCHAR(255),
+    token VARCHAR(255),
+    id_empresa INT,
+    estado_anulacion ENUM('A','P') DEFAULT 'P',
+    fecha TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id)
 );
 
 CREATE TABLE auditoria (

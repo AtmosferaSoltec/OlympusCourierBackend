@@ -121,14 +121,18 @@ const insertUsuario = async (req: Request, res: Response) => {
     try {
 
         const { id_ruc } = req.body.user;
-        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol } = req.body;
-
+        const { documento, nombres, apellidos, telefono, correo, cod_rol } = req.body;
+        let { fecha_nac } = req.body;
         // Validar si los campos estan vacios
-        if (!documento || !nombres || !clave || !cod_rol) {
+        if (!documento || !nombres || !cod_rol) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Por favor, proporciona todos los campos.'
             });
+        }
+
+        if (!fecha_nac) {
+            fecha_nac = '1900-01-01'
         }
 
         // Validar si el documento ya existe
@@ -170,8 +174,8 @@ const insertUsuario = async (req: Request, res: Response) => {
         }
 
         //Insertar usuario
-        const query = `INSERT INTO ${tbUsuario} (id_ruc, documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol) VALUES (?,?,?,?,?,?,?,?,?,?)`;
-        const [result]: any[] = await pool.query(query, [id_ruc, documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol]);
+        const query = `INSERT INTO ${tbUsuario} (id_ruc, documento, nombres, apellidos, telefono, correo, fecha_nac, clave, cod_rol) VALUES (?,?,?,?,?,?,?,?,?)`;
+        const [result]: any[] = await pool.query(query, [id_ruc, documento, nombres, apellidos, telefono, correo, fecha_nac, documento, cod_rol]);
 
         if (result.affectedRows === 1) {
             res.json({
@@ -198,14 +202,24 @@ const insertUsuario = async (req: Request, res: Response) => {
 
 const updateUsuario = async (req: Request, res: Response) => {
     try {
+        const { id_ruc } = req.body.user;
         const { id } = req.params;
-        const { documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol, id_ruc } = req.body;
+        const { documento, nombres, apellidos, telefono, correo, fecha_nac, cod_rol } = req.body;
 
         // Validar si los campos estan vacios
-        if (!documento || !nombres || !ape_paterno || !clave || !cod_rol || !id_ruc) {
+        if (!documento || !nombres || !cod_rol) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Por favor, proporciona todos los campos.'
+            });
+        }
+
+        const fechaObj = new Date(fecha_nac);
+        // Verifica si la fecha es válida
+        if (isNaN(fechaObj.getTime())) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'Fecha no válida'
             });
         }
 
@@ -215,15 +229,6 @@ const updateUsuario = async (req: Request, res: Response) => {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El rol no existe'
-            })
-        }
-
-        //Validar si el id_ruc existe
-        const [idRucExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbEmpresa} WHERE id = ?`, [id_ruc]);
-        if (idRucExistente[0].count === 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El ruc no existe'
             })
         }
 
@@ -254,18 +259,20 @@ const updateUsuario = async (req: Request, res: Response) => {
             });
         }
 
-        //Validar si el correo ya existe
-        const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ? AND id != ? AND id_ruc = ?`, [correo, id, id_ruc]);
-        if (correoExistente[0].count > 0) {
-            return res.json({
-                isSuccess: false,
-                mensaje: 'El correo ya existe en otro usuario'
-            });
+        if (correo) {
+            //Validar si el correo ya existe
+            const [correoExistente]: any = await pool.query(`SELECT COUNT(*) AS count FROM ${tbUsuario} WHERE correo = ? AND id != ? AND id_ruc = ?`, [correo, id, id_ruc]);
+            if (correoExistente[0].count > 0) {
+                return res.json({
+                    isSuccess: false,
+                    mensaje: 'El correo ya existe en otro usuario'
+                });
+            }
         }
 
         // Actualizar usuario
-        const query = `UPDATE ${tbUsuario} SET documento = ?, nombres = ?, ape_paterno = ?, ape_materno = ?, telefono = ?, correo = ?, fecha_nac = ?, clave = ?, cod_rol = ? WHERE id = ?`;
-        const [result]: any[] = await pool.query(query, [documento, nombres, ape_paterno, ape_materno, telefono, correo, fecha_nac, clave, cod_rol, id]);
+        const query = `UPDATE ${tbUsuario} SET documento = ?, nombres = ?, apellidos = ?, telefono = ?, correo = ?, fecha_nac = ?, cod_rol = ? WHERE id = ?`;
+        const [result]: any[] = await pool.query(query, [documento, nombres, apellidos, telefono, correo, fechaObj, cod_rol, id]);
 
         if (result.affectedRows === 1) {
 

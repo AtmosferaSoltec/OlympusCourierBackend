@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', checkAuth, controller.listarTodos);
 router.get('/:id', checkAuth, controller.get);
 router.post('/', checkAuth, controller.insertar);
-router.delete('/', checkAuth, controller.anular);
+router.post('/anular', checkAuth, controller.anular);
 router.patch('/:id', checkAuth, controller.setActivoComprobante);
 
 

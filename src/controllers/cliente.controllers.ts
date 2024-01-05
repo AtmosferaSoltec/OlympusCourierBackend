@@ -6,20 +6,50 @@ import { pool } from '../db';
 const getAllClientes = async (req: Request, res: Response) => {
     try {
 
-        const { estado, num_reparto, cliente } = req.query;
+        const { estado, tipo_doc, doc, cliente } = req.query;
 
-        let query = `SELECT ${tbCliente}.*, ${tbDistrito}.nombre as distrito FROM ${tbCliente} LEFT JOIN ${tbDistrito} ON ${tbCliente}.id_distrito = ${tbDistrito}.id`
+        let query = `SELECT tc.*, td.nombre as distrito FROM ${tbCliente} tc LEFT JOIN ${tbDistrito} td ON tc.id_distrito = td.id`
         let params: any[] = [];
         let hasWhere = false;
 
         if (estado === 'S' || estado === 'N') {
             if (hasWhere) {
-                query += ` AND ${tbCliente}.activo = ?`;
+                query += ` AND tc.activo = ?`;
             } else {
-                query += ` WHERE ${tbCliente}.activo = ?`;
+                query += ` WHERE tc.activo = ?`;
                 hasWhere = true;
             }
             params.push(estado);
+        }
+
+        if (tipo_doc && tipo_doc === '6' || tipo_doc === '1') {
+            if (hasWhere) {
+                query += ` AND tc.cod_tipodoc = ?`;
+            } else {
+                query += ` WHERE tc.cod_tipodoc = ?`;
+                hasWhere = true;
+            }
+            params.push(tipo_doc);
+        }
+
+        if (doc) {
+            if (hasWhere) {
+                query += ` AND tc.documento = ?`;
+            } else {
+                query += ` WHERE tc.documento = ?`;
+                hasWhere = true;
+            }
+            params.push(doc);
+        }
+
+        if (cliente) {
+            if (hasWhere) {
+                query += ` AND tc.nombres LIKE ?`;
+            } else {
+                query += ` WHERE tc.nombres LIKE ?`;
+                hasWhere = true;
+            }
+            params.push(`%${cliente}%`);
         }
 
         const [call]: any[] = await pool.query(query, params);
