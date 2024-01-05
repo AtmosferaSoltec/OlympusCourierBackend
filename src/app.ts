@@ -5,6 +5,7 @@ import "dotenv/config";
 import fs from 'fs';
 import { router } from './routes';
 import * as cron from 'node-cron';
+import { eliminarComprobantesSunat } from './func/funciones';
 
 const puerto = process.env.PORT || 3000;
 const app = express();
@@ -22,8 +23,7 @@ app.use((req, res, next) => {
 
 // Ejecuta la función todos los días a la medianoche
 cron.schedule('0 0 * * *', async () => {
-    // Lógica para consultar y actualizar el estado del comprobante
-    //await consultarYActualizarEstadoComprobante();
+    eliminarComprobantesSunat();
 });
 
 app.listen(puerto, () => {

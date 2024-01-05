@@ -27,7 +27,7 @@ const listarTodos = async (req: Request, res: Response) => {
         }
 
         if (desde && hasta) {
-            query += ` AND tc.fecha_creacion BETWEEN ? AND ?`;
+            query += ` AND DATE(tc.fecha_creacion) BETWEEN ? AND ?`;
             params.push(desde, hasta);
         }
 
@@ -529,35 +529,7 @@ const anular = async (req: Request, res: Response) => {
         });
     }
 };
-/*
-const anularSunat = async () => {
-    const data = {
-        "operacion": "generar_anulacion",
-        "tipo_de_comprobante": tipo_comprobante,
-        "serie": serie,
-        "numero": num_serie,
-        "motivo": motivo || "ANULACION POR ERROR"
-    }
 
-    try {
-        const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
-        if (call.status !== 200) {
-            return res.json({
-                isSuccess: false,
-                mensaje: call.data?.errors
-            });
-        } else {
-        }
-    } catch (error: any) {
-        console.log('Error al anular comprobante:', error);
-
-        res.json({
-            isSuccess: false,
-            mensaje: error.message
-        });
-        return;
-    }
-};*/
 
 const setActivoComprobante = async (req: Request, res: Response) => {
     const id = req.params.id;

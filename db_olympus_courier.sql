@@ -183,7 +183,9 @@ CREATE TABLE pendientes_anular_comprobantes (
     ruta VARCHAR(255),
     token VARCHAR(255),
     id_empresa INT,
-    estado_anulacion ENUM('A','P') DEFAULT 'P',
+    estado_anulacion ENUM('A','E','P') DEFAULT 'P',
+    mensaje_sunat VARCHAR(50),
+    enlace_anulacion VARCHAR(500),
     fecha TIMESTAMP DEFAULT NOW(),
     FOREIGN KEY (id_empresa) REFERENCES empresa(id)
 );

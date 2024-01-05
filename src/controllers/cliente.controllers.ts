@@ -34,12 +34,12 @@ const getAllClientes = async (req: Request, res: Response) => {
 
         if (doc) {
             if (hasWhere) {
-                query += ` AND tc.documento = ?`;
+                query += ` AND tc.documento LIKE ?`;
             } else {
-                query += ` WHERE tc.documento = ?`;
+                query += ` WHERE tc.documento LIKE ?`;
                 hasWhere = true;
             }
-            params.push(doc);
+            params.push(`%${doc}%`);
         }
 
         if (cliente) {
@@ -108,8 +108,8 @@ const getCliente = async (req: Request, res: Response) => {
 const searchCliente = async (req: Request, res: Response) => {
     try {
         const { datos } = req.params;
-        const query = `SELECT * FROM ${tbCliente} WHERE documento LIKE ? OR nombres LIKE ? OR telefono LIKE ? LIMIT 5`;
-        const [rows]: any[] = await pool.query(query, [`%${datos}%`, `%${datos}%`, `%${datos}%`]);
+        const query = `SELECT * FROM ${tbCliente} WHERE documento LIKE ? OR nombres LIKE ? LIMIT 5`;
+        const [rows]: any[] = await pool.query(query, [`%${datos}%`, `%${datos}%`]);
 
         const calMap = await Promise.all(
             rows.map(async (cliente: any) => ({
@@ -128,12 +128,12 @@ const searchCliente = async (req: Request, res: Response) => {
             }))
         );
 
-        res.json({
+        return res.json({
             isSuccess: true,
             data: calMap
         });
     } catch (error) {
-        res.json({
+        return res.json({
             isSuccess: false,
             mensaje: 'Error al buscar clientes en la base de datos'
         });
@@ -206,19 +206,19 @@ const insertCliente = async (req: Request, res: Response) => {
 
         //Verificar si se insertó correctamente y devolver el id insertado
         if (result.affectedRows === 1) {
-            res.json({
+            return res.json({
                 isSuccess: true,
                 mensaje: 'Cliente insertado correctamente',
                 data: result.insertId
             });
         } else {
-            res.json({
+            return res.json({
                 isSuccess: false,
                 mensaje: 'No se pudo insertar el cliente'
             });
         }
     } catch (err: any) {
-        res.json({
+        return res.json({
             isSuccess: false,
             mensaje: err.message
         });

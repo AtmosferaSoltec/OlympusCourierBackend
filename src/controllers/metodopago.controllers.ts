@@ -34,13 +34,13 @@ const getAll = async (req: Request, res: Response) => {
             }
         }
         const [call]: any[] = await pool.query(query, [id_ruc]);
-  
-        res.json({
+
+        return res.json({
             isSuccess: true,
             data: call
         });
     } catch (error: any) {
-        res.json({
+        return res.json({
             isSuccess: false,
             mensaje: error.message
         });

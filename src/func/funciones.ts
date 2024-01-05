@@ -1,5 +1,6 @@
+import axios from 'axios';
 import { pool } from '../db';
-import { tbCliente, tbComprobante, tbDistrito, tbHistorialReparto, tbItemReparto, tbTipoDoc, tbTipoOperacion, tbTipoPaquete, tbUsuario } from './tablas';
+import { tbCliente, tbComprobante, tbDistrito, tbHistorialReparto, tbItemReparto, tbPendientesAnulacion, tbTipoDoc, tbTipoOperacion, tbTipoPaquete, tbUsuario } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
@@ -98,5 +99,96 @@ export const getMovimientosRepartoByRepartoId = async (id: number) => {
     } catch (error) {
         console.log(error);
         return []
+    }
+};
+
+export const eliminarComprobantesSunat = async () => {
+    try {
+
+        const [pendientes]: any[] = await pool.query(`SELECT * FROM ${tbPendientesAnulacion} WHERE estado_anulacion = 'P'`)
+        if (pendientes.length > 0) {
+            for (const pendiente of pendientes) {
+                const { tipo_comprobante, serie, num_serie, motivo, ruta, token } = pendiente;
+
+                const data = {
+                    "operacion": "generar_anulacion",
+                    "tipo_de_comprobante": tipo_comprobante,
+                    "serie": serie,
+                    "numero": num_serie,
+                    "motivo": motivo || "ANULACION POR ERROR"
+                }
+                try {
+                    const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
+                    if (call.status !== 200) {
+                        console.log('Error al anular comprobante:', call.data);
+                        return;
+                    }
+                    const { errors, sunat_description, enlace } = call.data;
+
+                    let mensaje_sunat = '';
+                    if (sunat_description) {
+                        mensaje_sunat = sunat_description;
+                    } else {
+                        mensaje_sunat = errors;
+                    }
+
+                    const queryUpdate = `UPDATE ${tbPendientesAnulacion} SET estado_anulacion = ?, mensaje_sunat = ?, enlace_anulacion = ? WHERE id = ?`;
+                    await pool.query(queryUpdate, ['E', mensaje_sunat, enlace, pendiente.id]);
+
+                } catch (error: any) {
+                    const queryUpdate = `UPDATE ${tbPendientesAnulacion} SET mensaje_sunat = ? WHERE id = ?`;
+                    await pool.query(queryUpdate, [error.message, pendiente.id]);
+                }
+
+            }
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+export const verificarAnulacionesSunat = async () => {
+    try {
+
+        const [pendientes]: any[] = await pool.query(`SELECT * FROM ${tbPendientesAnulacion} WHERE estado_anulacion = 'P'`)
+        if (pendientes.length > 0) {
+            for (const pendiente of pendientes) {
+                const { tipo_comprobante, serie, num_serie, motivo, ruta, token } = pendiente;
+
+                const data = {
+                    "operacion": "consultar_comprobante",
+                    "tipo_de_comprobante": tipo_comprobante,
+                    "serie": serie,
+                    "numero": num_serie
+                }
+                try {
+                    const call = await axios.post(ruta, data, { headers: { 'Authorization': token, 'Content-Type': 'application/json', } })
+                    if (call.status !== 200) {
+                        console.log('Error al anular comprobante:', call.data);
+                        return;
+                    }
+                    const { errors, sunat_description, enlace } = call.data;
+
+                    let mensaje_sunat = '';
+                    if (sunat_description) {
+                        mensaje_sunat = sunat_description;
+                    } else {
+                        mensaje_sunat = errors;
+                    }
+
+                    const queryUpdate = `UPDATE ${tbPendientesAnulacion} SET estado_anulacion = ?, mensaje_sunat = ?, enlace_anulacion = ? WHERE id = ?`;
+                    await pool.query(queryUpdate, ['E', mensaje_sunat, enlace, pendiente.id]);
+
+                } catch (error: any) {
+                    const queryUpdate = `UPDATE ${tbPendientesAnulacion} SET mensaje_sunat = ? WHERE id = ?`;
+                    await pool.query(queryUpdate, [error.message, pendiente.id]);
+                }
+
+            }
+        }
+    } catch (error: any) {
+        console.log(error.message);
+
     }
 };
