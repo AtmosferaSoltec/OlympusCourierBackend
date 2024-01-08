@@ -118,7 +118,7 @@ const getReparto = async (req: Request, res: Response) => {
 const insertReparto = async (req: Request, res: Response) => {
     try {
         const { id_ruc, id } = req.body.user;
-        const { anotacion, clave, id_cliente, items } = req.body;
+        const { anotacion, clave, cobro_adicional, id_cliente, items } = req.body;
 
         //Verificar si todos los campos fueron proporcionados
         if (!id_cliente || !items || !clave) {
@@ -164,8 +164,8 @@ const insertReparto = async (req: Request, res: Response) => {
         const nuevo_num_reparto = empresasRows[0].num_reparto + 1;
 
         // Insertar el reparto
-        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, id_cliente, total) VALUES (?,?,?,?,?,?)`;
-        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, id_cliente, total]);
+        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, cobro_adicional, id_cliente, total) VALUES (?,?,?,?,?,?,?)`;
+        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, cobro_adicional, id_cliente, total]);
 
         if (repartoResult.affectedRows !== 1) {
             return res.json({

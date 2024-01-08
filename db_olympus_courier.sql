@@ -100,6 +100,7 @@ CREATE TABLE reparto (
   num_reparto INT,
   anotacion VARCHAR(255) DEFAULT '',
   clave VARCHAR(255) DEFAULT '',
+  cobro_adicional DECIMAL(10,2),
   estado CHAR(1) DEFAULT 'P',
   fecha_creacion TIMESTAMP DEFAULT NOW(),
   fecha_entrega TIMESTAMP,
@@ -186,6 +187,7 @@ CREATE TABLE pendientes_anular_comprobantes (
     estado_anulacion ENUM('A','E','P') DEFAULT 'P',
     mensaje_sunat VARCHAR(50),
     enlace_anulacion VARCHAR(500),
+    estado ENUM('A','E'),
     fecha TIMESTAMP DEFAULT NOW(),
     FOREIGN KEY (id_empresa) REFERENCES empresa(id)
 );
