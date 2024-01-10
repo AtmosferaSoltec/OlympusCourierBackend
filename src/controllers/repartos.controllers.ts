@@ -1,17 +1,17 @@
 import { getClienteById, getComprobanteById, getItemsRepartoByRepartoId, getMovimientosRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbCliente, tbEmpresa, tbHistorialReparto, tbItemReparto, tbReparto, tbTipoPaquete } from '../func/tablas';
+import { tbCliente, tbEmpresa, tbHistorialReparto, tbItemReparto, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {
 
         const { id_ruc } = req.body.user;
 
-        const { estado, estado_envio, num_reparto, cliente, desde, hasta } = req.query;
+        const { estado, estado_envio, num_reparto, cliente, desde, hasta, id_usuario } = req.query;
 
         //Traemos todos los repartos y el nombre del cliente para poder hacer un filtrado
-        let query = `SELECT tr.*, tc.nombres FROM ${tbReparto} tr LEFT JOIN ${tbCliente} tc ON tr.id_cliente = tc.id WHERE tr.id_ruc = ?`
+        let query = `SELECT tr.*, tc.nombres, tu.nombres as nombre_usuario FROM ${tbReparto} tr LEFT JOIN ${tbCliente} tc ON tr.id_cliente = tc.id LEFT JOIN ${tbUsuario} tu ON tr.id_usuario = tu.id WHERE tr.id_ruc = ?`
         let params: any[] = [id_ruc];
 
         if (estado === 'S' || estado === 'N') {
@@ -37,6 +37,12 @@ const getAllRepartos = async (req: Request, res: Response) => {
         if (desde && hasta) {
             query += ` AND DATE(tr.fecha_creacion) BETWEEN ? AND ?`;
             params.push(desde, hasta);
+        }
+        
+
+        if (id_usuario && !isNaN(Number(id_usuario))) {
+            query += ` AND tr.id_usuario = ?`;
+            params.push(id_usuario);
         }
 
         // Ordenar por fecha de creación
@@ -164,8 +170,8 @@ const insertReparto = async (req: Request, res: Response) => {
         const nuevo_num_reparto = empresasRows[0].num_reparto + 1;
 
         // Insertar el reparto
-        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, cobro_adicional, id_cliente, total) VALUES (?,?,?,?,?,?,?)`;
-        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, cobro_adicional, id_cliente, total]);
+        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, cobro_adicional, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?,?,?)`;
+        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, cobro_adicional, id_cliente, id, total]);
 
         if (repartoResult.affectedRows !== 1) {
             return res.json({

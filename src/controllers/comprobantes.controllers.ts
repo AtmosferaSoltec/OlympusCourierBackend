@@ -112,8 +112,6 @@ const insertar = async (req: Request, res: Response) => {
             direc, correo, telefono, repartos
         } = req.body;
 
-        console.log(id_metodo_pago);
-
         // Validar que todos los campos requeridos estén presentes
         //Validar si el tipo de comprobante es 1 o 2
         if (tipo_comprobante !== 1 && tipo_comprobante !== 2) {
