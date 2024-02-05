@@ -22,7 +22,7 @@ const getAllClientes = async (req: Request, res: Response) => {
             params.push(estado);
         }
 
-        if (tipo_doc && tipo_doc === '6' || tipo_doc === '1') {
+        if (tipo_doc && tipo_doc === '6' || tipo_doc === '1' || tipo_doc === '4') {
             if (hasWhere) {
                 query += ` AND tc.cod_tipodoc = ?`;
             } else {
@@ -152,10 +152,10 @@ const insertCliente = async (req: Request, res: Response) => {
         }
 
         //
-        if (cod_tipodoc !== '6' && cod_tipodoc !== '1') {
+        if (cod_tipodoc !== '6' && cod_tipodoc !== '1' && cod_tipodoc !== '4') {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El codTipoDoc debe ser 1, 6, 4, 7 o -'
+                mensaje: 'El codTipoDoc debe ser 1, 6 o 4'
             });
         }
 
@@ -170,6 +170,12 @@ const insertCliente = async (req: Request, res: Response) => {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El DNI debe tener 8 dígitos'
+            });
+        }
+        if (cod_tipodoc == '4' && documento.length !== 12) {
+            return res.json({
+                isSuccess: false,
+                mensaje: 'El CARNET DE EXTRANJERÍA debe tener 12 dígitos'
             });
         }
 

@@ -19,6 +19,7 @@ const login = async (req: Request, res: Response) => {
 
         const consulta = `SELECT * FROM ${tbUsuario} WHERE documento = ? AND clave = ? LIMIT 1`;
         const [resultados]: any[] = await pool.query(consulta, [documento, clave]);
+        
         if (resultados.length > 0) {
 
             const payload = resultados[0];

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbMetodoPago } from '../func/tablas';
+import { tbVehiculo } from '../func/tablas';
 
 const getAll = async (req: Request, res: Response) => {
     try {
@@ -14,26 +14,15 @@ const getAll = async (req: Request, res: Response) => {
             });
         }
 
+        let query = `SELECT * FROM ${tbVehiculo} WHERE id_ruc = ?`;
+        let params: any[] = [id_ruc];
 
-
-        let query = `SELECT * FROM ${tbMetodoPago} WHERE id_ruc = ?`;
-        switch (estado?.toString().toUpperCase()) {
-            case 'S':
-                query += " AND activo = 'S'";
-                break;
-            case 'N':
-                query += " AND activo = 'N'";
-                break;
-            case 'T': break;
-            default: {
-                res.json({
-                    isSuccess: false,
-                    mensaje: 'El estado no es válido'
-                })
-                return;
-            }
+        if(estado == 'S' || estado == 'N') {
+            query += " AND activo = ?";
+            params.push(estado);
         }
-        const [call]: any[] = await pool.query(query, [id_ruc]);
+
+        const [call]: any[] = await pool.query(query, params);
 
         return res.json({
             isSuccess: true,
@@ -60,7 +49,7 @@ const insert = async (req: Request, res: Response) => {
         }
 
         //Verificar si el nombre ya existe
-        const [verificarNombre]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE nombre = ? AND id_ruc = ?`, [nombre, id_ruc]);
+        const [verificarNombre]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbVehiculo} WHERE nombre = ? AND id_ruc = ?`, [nombre, id_ruc]);
         if (verificarNombre[0].count > 0) {
             return res.json({
                 isSuccess: false,
@@ -68,7 +57,7 @@ const insert = async (req: Request, res: Response) => {
             });
         }
 
-        const query = `INSERT INTO ${tbMetodoPago} (id_ruc, nombre) VALUES (?, ?)`;
+        const query = `INSERT INTO ${tbVehiculo} (id_ruc, nombre) VALUES (?, ?)`;
         const [call]: any[] = await pool.query(query, [id_ruc, nombre]);
         if (call.affectedRows === 0) {
             return res.json({
@@ -103,7 +92,7 @@ const update = async (req: Request, res: Response) => {
         }
 
         //Verificar si el id existe
-        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE id = ?`, [id]);
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbVehiculo} WHERE id = ?`, [id]);
         if (verificar[0].count === 0) {
             return res.json({
                 isSuccess: false,
@@ -112,7 +101,7 @@ const update = async (req: Request, res: Response) => {
         }
 
         //Verificar si el nombre ya existe
-        const [verificarNombre]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE nombre = ? AND id != ? AND id_ruc = ?`, [nombre, id, id_ruc]);
+        const [verificarNombre]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbVehiculo} WHERE nombre = ? AND id != ? AND id_ruc = ?`, [nombre, id, id_ruc]);
         if (verificarNombre[0].count > 0) {
             return res.json({
                 isSuccess: false,
@@ -120,7 +109,7 @@ const update = async (req: Request, res: Response) => {
             });
         }
 
-        const query = `UPDATE ${tbMetodoPago} SET nombre = ? WHERE id = ?`;
+        const query = `UPDATE ${tbVehiculo} SET nombre = ? WHERE id = ?`;
         const [call]: any[] = await pool.query(query, [nombre, id]);
         if (call.affectedRows === 0) {
             return res.json({
@@ -153,7 +142,7 @@ const setActivo = async (req: Request, res: Response) => {
         }
 
         //Verificar si el id existe
-        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbMetodoPago} WHERE id = ?`, [id]);
+        const [verificar]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbVehiculo} WHERE id = ?`, [id]);
         if (verificar[0].count === 0) {
             return res.json({
                 isSuccess: false,
@@ -161,7 +150,7 @@ const setActivo = async (req: Request, res: Response) => {
             });
         }
 
-        const query = `UPDATE ${tbMetodoPago} SET activo = ? WHERE id = ?`;
+        const query = `UPDATE ${tbVehiculo} SET activo = ? WHERE id = ?`;
         const [call]: any[] = await pool.query(query, [activo, id]);
         if (call.affectedRows === 0) {
             return res.json({

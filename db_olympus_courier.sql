@@ -33,6 +33,15 @@ CREATE TABLE metodo_pago (
   FOREIGN KEY (id_ruc) REFERENCES empresa(id)
 );
 
+CREATE TABLE vehiculo (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_ruc INT,
+  nombre VARCHAR(50),
+  fecha_creacion TIMESTAMP DEFAULT now(),
+  activo CHAR(1) DEFAULT 'S',
+  FOREIGN KEY (id_ruc) REFERENCES empresa(id)
+);
+
 CREATE TABLE tipo_paquete (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_ruc INT,

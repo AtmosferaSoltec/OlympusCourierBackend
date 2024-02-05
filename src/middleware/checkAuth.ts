@@ -13,7 +13,7 @@ const checkAuth = (req: Request, res: Response, next: NextFunction) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.SECRET_KEY as string);
+        const decoded = jwt.verify(token, process.env.SECRET_KEY || 'secretKey');
         if (typeof decoded === 'object') {
             req.body.user = decoded;
             next();

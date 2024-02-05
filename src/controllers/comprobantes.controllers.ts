@@ -128,7 +128,7 @@ const insertar = async (req: Request, res: Response) => {
             });
             return;
         }
-        if (tipo_doc !== 1 && tipo_doc !== 6) {
+        if (tipo_doc !== 1 && tipo_doc !== 6 && tipo_doc !== 4) {
             res.json({
                 isSuccess: false,
                 mensaje: 'Tipo de documento no admitido'
@@ -167,6 +167,7 @@ const insertar = async (req: Request, res: Response) => {
             });
             return;
         }
+        
         //El nombre es requerido
         if (!nombre) {
             res.json({
