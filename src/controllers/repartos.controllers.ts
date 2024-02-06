@@ -38,7 +38,7 @@ const getAllRepartos = async (req: Request, res: Response) => {
             query += ` AND DATE(tr.fecha_creacion) BETWEEN ? AND ?`;
             params.push(desde, hasta);
         }
-        
+
 
         if (id_usuario && !isNaN(Number(id_usuario))) {
             query += ` AND tr.id_usuario = ?`;
@@ -124,17 +124,18 @@ const getReparto = async (req: Request, res: Response) => {
 const insertReparto = async (req: Request, res: Response) => {
     try {
         const { id_ruc, id } = req.body.user;
-        const { anotacion, clave, cobro_adicional, id_cliente, items } = req.body;
+        const { anotacion, id_vehiculo, id_cliente, items } = req.body;
 
         //Verificar si todos los campos fueron proporcionados
-        if (!id_cliente || !items || !clave) {
+        if (!id_cliente || !id_vehiculo || !items) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'Faltan campos requeridos, por favor verifique.'
             });
         }
+
         //Verificar si los items son una lista de objetos
-        if (!Array.isArray(items) || items.some(item => typeof item !== 'object')) {
+        if (!Array.isArray(items) || items.some((item: any) => typeof item !== 'object')) {
             return res.json({
                 isSuccess: false,
                 mensaje: 'El campo "items" debe ser una lista de objetos.'
@@ -170,8 +171,8 @@ const insertReparto = async (req: Request, res: Response) => {
         const nuevo_num_reparto = empresasRows[0].num_reparto + 1;
 
         // Insertar el reparto
-        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, clave, cobro_adicional, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?,?,?)`;
-        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, clave, cobro_adicional, id_cliente, id, total]);
+        const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, id_vehiculo, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?,?)`;
+        const [repartoResult]: any[] = await pool.query(repartoQuery, [id_ruc, nuevo_num_reparto, anotacion, id_vehiculo, id_cliente, id, total]);
 
         if (repartoResult.affectedRows !== 1) {
             return res.json({
@@ -200,19 +201,10 @@ const insertReparto = async (req: Request, res: Response) => {
         }
 
         for (const item of items) {
-            const { num_guia, detalle, cant, precio, id_tipo_paquete } = item;
+            const { num_guia, precio, adicional, clave, detalle } = item;
 
-            // Verificar si el tipo de paquete existe
-            const [tipoPaqueteRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbTipoPaquete} WHERE id = ?`, [id_tipo_paquete]);
-            if (tipoPaqueteRows[0].count === 0) {
-                return res.json({
-                    isSuccess: false,
-                    mensaje: `El tipo de paquete con ID: ${id_tipo_paquete} no existe`
-                });
-            }
-
-            const itemQuery = `INSERT INTO ${tbItemReparto} (num_guia, detalle, cant, precio, id_reparto, id_tipo_paquete) VALUES (?,?,?,?,?,?)`;
-            const [itemResult]: any[] = await pool.query(itemQuery, [num_guia, detalle, cant, precio, repartoResult.insertId, id_tipo_paquete]);
+            const itemQuery = `INSERT INTO ${tbItemReparto} (id_reparto, num_guia, precio, adicional, clave, detalle) VALUES (?,?,?,?,?,?)`;
+            const [itemResult]: any[] = await pool.query(itemQuery, [repartoResult.insertId, num_guia, precio, adicional, clave, detalle]);
 
             if (itemResult.affectedRows === 0) {
                 return res.json({

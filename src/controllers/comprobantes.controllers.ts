@@ -105,7 +105,6 @@ const insertar = async (req: Request, res: Response) => {
     try {
         const { id_ruc, id } = req.body.user;
 
-
         const {
             tipo_comprobante, id_metodo_pago, num_operacion,
             tipo_doc, documento, nombre,
@@ -233,35 +232,7 @@ const insertar = async (req: Request, res: Response) => {
             return;
         }
 
-        const itemsNubefact: any[] = []
-
-        items.forEach((item: any) => {
-            let precioUn = item.precio / 1.18;
-            precioUn = +(precioUn.toFixed(4)); // limita a 4 decimales
-
-            let igv = item.precio - precioUn;
-            igv = +(igv.toFixed(4)); // limita a 4 decimales
-
-            itemsNubefact.push({
-                "unidad_de_medida": "ZZ",
-                "codigo": item.id_reparto,
-                "codigo_producto_sunat": "",
-                "descripcion": `Servicio de transporte de ${item.cant} (${item.tipo_paquete})`,
-                "cantidad": 1,
-                "valor_unitario": precioUn,
-                "precio_unitario": item.precio,
-                "descuento": "",
-                "subtotal": precioUn,
-                "tipo_de_igv": 1,
-                "igv": igv,
-                "total": item.precio,
-                "anticipo_regularizacion": false,
-                "anticipo_documento_serie": "",
-                "anticipo_documento_numero": ""
-            })
-        });
-
-        let total = itemsNubefact.reduce((total, currentItem) => total + Number(currentItem.total), 0);
+        let total = items.reduce((total: any, currentItem: any) => total + Number(currentItem.precio), 0);
         total = +(total.toFixed(4)); // limita a 4 decimales
 
         let montoBase = total / 1.18;
@@ -310,6 +281,27 @@ const insertar = async (req: Request, res: Response) => {
                 });
                 return;
         }
+
+
+        const itemsNubefact: any[] = []
+
+        itemsNubefact.push({
+            "unidad_de_medida": "ZZ",
+            "codigo": "",
+            "codigo_producto_sunat": "",
+            "descripcion": `SERVICIO DE REPARTO`,
+            "cantidad": 1,
+            "valor_unitario": montoBase,
+            "precio_unitario": total,
+            "descuento": "",
+            "subtotal": montoBase,
+            "tipo_de_igv": 1,
+            "igv": montoIgv,
+            "total": total,
+            "anticipo_regularizacion": false,
+            "anticipo_documento_serie": "",
+            "anticipo_documento_numero": ""
+        })
 
         const data = {
             "operacion": "generar_comprobante",
