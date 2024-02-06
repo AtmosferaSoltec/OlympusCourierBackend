@@ -26,12 +26,14 @@ cron.schedule('0 0 * * *', async () => {
     eliminarComprobantesSunat();
 });
 
+
+/*
 app.listen(puerto, () => {
     console.log(`Servidor HTTPS en el puerto ${puerto}`);
-});
+});*/
 
 
-/*const options = {
+const options = {
     key: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/fullchain.pem'),
 };
@@ -40,4 +42,4 @@ const server = https.createServer(options, app);
 
 server.listen(puerto, () => {
     console.log(`Servidor HTTPS en el puerto ${puerto}`);
-});*/
+});
