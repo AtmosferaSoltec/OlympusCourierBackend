@@ -84,7 +84,7 @@ export const getComprobanteById = async (id: number) => {
 
 export const getItemsRepartoByRepartoId = async (id: number) => {
     try {
-        const [items]: any[] = await pool.query(`SELECT ir.*, tp.nombre as tipo_paquete FROM ${tbItemReparto} ir LEFT JOIN ${tbTipoPaquete} tp ON ir.id_tipo_paquete = tp.id WHERE id_reparto = ?`, [id]);
+        const [items]: any[] = await pool.query(`SELECT * FROM ${tbItemReparto} WHERE id_reparto = ?`, [id]);
         return items;
     } catch (error) {
         console.log(error);
