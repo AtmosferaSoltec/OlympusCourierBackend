@@ -8,10 +8,16 @@ const getAllRepartos = async (req: Request, res: Response) => {
 
         const { id_ruc } = req.body.user;
 
-        const { estado, estado_envio, num_reparto, cliente, desde, hasta, id_usuario } = req.query;
+        const { estado, estado_envio, num_reparto, cliente, desde, hasta, id_usuario, id_distrito, id_vehiculo } = req.query;
 
         //Traemos todos los repartos y el nombre del cliente para poder hacer un filtrado
-        let query = `SELECT tr.*, tc.nombres, tu.nombres as nombre_usuario FROM ${tbReparto} tr LEFT JOIN ${tbCliente} tc ON tr.id_cliente = tc.id LEFT JOIN ${tbUsuario} tu ON tr.id_usuario = tu.id WHERE tr.id_ruc = ?`
+        let query = `
+        SELECT tr.*, tc.nombres, tu.nombres as nombre_usuario
+        FROM ${tbReparto} tr
+        LEFT JOIN ${tbCliente} tc ON tr.id_cliente = tc.id
+        LEFT JOIN ${tbUsuario} tu ON tr.id_usuario = tu.id
+        WHERE tr.id_ruc = ?`
+
         let params: any[] = [id_ruc];
 
         if (estado === 'S' || estado === 'N') {
@@ -43,6 +49,16 @@ const getAllRepartos = async (req: Request, res: Response) => {
         if (id_usuario && !isNaN(Number(id_usuario))) {
             query += ` AND tr.id_usuario = ?`;
             params.push(id_usuario);
+        }
+
+        if(id_distrito){
+            query += ` AND tc.id_distrito =?`;
+            params.push(id_distrito);
+        }
+
+        if (id_vehiculo){
+            query += ` AND tr.id_vehiculo =?`;
+            params.push(id_vehiculo);
         }
 
         // Ordenar por fecha de creación
