@@ -124,7 +124,8 @@ const getReparto = async (req: Request, res: Response) => {
 const insertReparto = async (req: Request, res: Response) => {
     try {
         const { id_ruc, id } = req.body.user;
-        const { anotacion, id_vehiculo, id_cliente, items } = req.body;
+        const { anotacion, id_cliente, items } = req.body;
+        let {id_vehiculo} = req.body;
 
         //Verificar si todos los campos fueron proporcionados
         if (!id_cliente || !id_vehiculo || !items) {
@@ -155,6 +156,10 @@ const insertReparto = async (req: Request, res: Response) => {
                 total += item.precio;
             }
         });
+
+        if(!isNaN(Number(id_vehiculo))){
+            id_vehiculo = null
+        }
 
         //Verificar si el cliente existe
         const [clienteRows]: any[] = await pool.query(`SELECT COUNT(*) AS count FROM ${tbCliente} WHERE id = ?`, [id_cliente]);
