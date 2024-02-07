@@ -13,6 +13,10 @@ app.use(cors());
 app.use(express.json())
 app.use('/api', router);
 
+app.get('/ping', (req, res)=>{
+    res.send("Pong")
+})
+
 
 app.use((req, res, next) => {
     if (!req.secure) {
@@ -27,12 +31,12 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 
-/*
+
 app.listen(puerto, () => {
     console.log(`Servidor HTTPS en el puerto ${puerto}`);
-});*/
+});
 
-
+/*
 const options = {
     key: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/sv-yaaugkfbpu.cloud.elastika.pe/fullchain.pem'),
@@ -42,4 +46,4 @@ const server = https.createServer(options, app);
 
 server.listen(puerto, () => {
     console.log(`Servidor HTTPS en el puerto ${puerto}`);
-});
+});*/
