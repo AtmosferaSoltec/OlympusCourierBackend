@@ -157,7 +157,7 @@ const insertReparto = async (req: Request, res: Response) => {
             }
         });
 
-        if(!isNaN(Number(id_vehiculo))){
+        if(id_vehiculo === 'T'){
             id_vehiculo = null
         }
 
