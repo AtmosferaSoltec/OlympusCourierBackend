@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import axios from "axios";
 import { pool } from '../db';
-import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbPendientesAnulacion, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
+import { tbComprobante, tbEmpresa, tbItemReparto, tbMetodoPago, tbPendientesAnulacion, tbReparto, tbUsuario } from '../func/tablas';
 
 const listarTodos = async (req: Request, res: Response) => {
     try {
@@ -223,7 +223,7 @@ const insertar = async (req: Request, res: Response) => {
         }
 
         //Traer Lista de Items de los repartos con el tipo de paquete usando left join
-        const [items]: any[] = await pool.query(`SELECT ir.*, tp.nombre as tipo_paquete FROM ${tbItemReparto} ir LEFT JOIN ${tbTipoPaquete} tp ON ir.id_tipo_paquete = tp.id WHERE ir.id_reparto IN (?)`, [repartos]);
+        const [items]: any[] = await pool.query(`SELECT * FROM ${tbItemReparto} WHERE id_reparto IN (?)`, [repartos]);
         if (items.length === 0) {
             res.json({
                 isSuccess: false,
