@@ -10,7 +10,6 @@ export const tbTipoDoc = 'tipo_doc';
 export const tbComprobante = 'comprobante';
 export const tbMetodoPago = 'metodo_pago';
 export const tbVehiculo = 'vehiculo';
-export const tbTipoPaquete = 'tipo_paquete';
 export const tbRol = 'rol';
 export const tbEmpresa = 'empresa';
 export const tbPendientesAnulacion = 'pendientes_anular_comprobantes';

@@ -1,7 +1,7 @@
 import { getClienteById, getComprobanteById, getItemsRepartoByRepartoId, getMovimientosRepartoByRepartoId, getUsuarioById } from '../func/funciones';
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { tbCliente, tbEmpresa, tbHistorialReparto, tbItemReparto, tbReparto, tbTipoPaquete, tbUsuario } from '../func/tablas';
+import { tbCliente, tbEmpresa, tbHistorialReparto, tbItemReparto, tbReparto, tbUsuario } from '../func/tablas';
 
 const getAllRepartos = async (req: Request, res: Response) => {
     try {

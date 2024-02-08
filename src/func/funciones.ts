@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { pool } from '../db';
-import { tbCliente, tbComprobante, tbDistrito, tbHistorialReparto, tbItemReparto, tbPendientesAnulacion, tbTipoDoc, tbTipoOperacion, tbTipoPaquete, tbUsuario } from './tablas';
+import { tbCliente, tbComprobante, tbDistrito, tbHistorialReparto, tbItemReparto, tbPendientesAnulacion, tbTipoDoc, tbTipoOperacion, tbUsuario } from './tablas';
 
 export const getDistritoById = async (id: number) => {
     try {
