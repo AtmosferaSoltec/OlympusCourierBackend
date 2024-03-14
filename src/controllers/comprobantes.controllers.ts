@@ -134,38 +134,6 @@ const insertar = async (req: Request, res: Response) => {
             });
             return;
         }
-
-        if (tipo_comprobante === 1 && tipo_doc === 1) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'No se puede emitir una factura a una persona natural'
-            });
-            return;
-        } else if (tipo_comprobante === 2 && tipo_doc === 6) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'No se puede emitir una boleta a un empresa'
-            });
-            return;
-        }
-
-        //Si el tipo de comprobante es 1, el documento debe tener 8 dígitos
-        if (tipo_doc === 1 && documento.length !== 8) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'El campo documento debe tener 8 dígitos'
-            });
-            return;
-        }
-
-        //Si el tipo de comprobante es 2, el documento debe tener 11 dígitos
-        if (tipo_doc === 6 && documento.length !== 11) {
-            res.json({
-                isSuccess: false,
-                mensaje: 'El campo documento debe tener 11 dígitos'
-            });
-            return;
-        }
         
         //El nombre es requerido
         if (!nombre) {
