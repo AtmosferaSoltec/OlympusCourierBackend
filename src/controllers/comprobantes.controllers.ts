@@ -107,9 +107,10 @@ const insertar = async (req: Request, res: Response) => {
 
         const {
             tipo_comprobante, id_metodo_pago, num_operacion,
-            tipo_doc, documento, nombre,
+            tipo_doc, nombre,
             direc, correo, telefono, repartos
         } = req.body;
+        let documento = req.body.documento;
 
         // Validar que todos los campos requeridos estén presentes
         //Validar si el tipo de comprobante es 1 o 2
@@ -134,7 +135,7 @@ const insertar = async (req: Request, res: Response) => {
             });
             return;
         }
-        
+
         //El nombre es requerido
         if (!nombre) {
             res.json({
@@ -270,6 +271,9 @@ const insertar = async (req: Request, res: Response) => {
             "anticipo_documento_serie": "",
             "anticipo_documento_numero": ""
         })
+
+        console.log(tipo_doc);
+
 
         const data = {
             "operacion": "generar_comprobante",

@@ -22,10 +22,10 @@ const consultarDni = async (req: Request, res: Response) => {
             })
         }
 
-        if (doc.length !== 8) {
+        if (doc.length !== 8 && doc.length !== 9) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El documento debe tener 8 dígitos'
+                mensaje: 'El documento debe tener 3 dígitos'
             })
         }
 
@@ -41,6 +41,13 @@ const consultarDni = async (req: Request, res: Response) => {
                     correo: clientes[0].correo,
                     telefono: clientes[0].telefono
                 }
+            })
+        }
+
+        if (doc.length == 9){
+            return res.json({
+                isSuccess: false,
+                mensaje: 'No se pudo consultar el CE'
             })
         }
 

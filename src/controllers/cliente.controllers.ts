@@ -52,6 +52,8 @@ const getAllClientes = async (req: Request, res: Response) => {
             params.push(`%${cliente}%`);
         }
 
+        //query += ` LIMIT 10`
+
         const [call]: any[] = await pool.query(query, params);
         res.json({
             isSuccess: true,
@@ -172,10 +174,10 @@ const insertCliente = async (req: Request, res: Response) => {
                 mensaje: 'El DNI debe tener 8 dígitos'
             });
         }
-        if (cod_tipodoc == '4' && documento.length !== 12) {
+        if (cod_tipodoc == '4' && documento.length !== 9) {
             return res.json({
                 isSuccess: false,
-                mensaje: 'El CARNET DE EXTRANJERÍA debe tener 12 dígitos'
+                mensaje: 'El CARNET DE EXTRANJERÍA debe tener 9 dígitos'
             });
         }
 
