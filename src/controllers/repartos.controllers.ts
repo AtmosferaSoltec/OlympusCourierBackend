@@ -65,7 +65,7 @@ const getAllRepartos = async (req: Request, res: Response) => {
         query += ` ORDER BY tr.fecha_creacion DESC`;
 
         //Maximo 50 repartos
-        query += ` LIMIT 50`;
+        //query += ` LIMIT 50`;
 
         const [repartos]: any[] = await pool.query(query, params);
         const repartosConItems = await Promise.all(
