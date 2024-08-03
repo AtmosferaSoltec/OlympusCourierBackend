@@ -4,6 +4,7 @@ import { checkAuth } from '../middleware/checkAuth';
 
 const router = Router();
 
+router.post('/subirMercaderia', checkAuth, controller.subirMercaderia);
 router.get('/', checkAuth, controller.getAllRepartos);
 router.get('/:id', checkAuth, controller.getReparto);
 router.post('/', checkAuth, controller.insertReparto);
