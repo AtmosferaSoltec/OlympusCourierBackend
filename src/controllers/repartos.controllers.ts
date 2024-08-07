@@ -47,7 +47,12 @@ const getAllRepartos = async (req: Request, res: Response) => {
       params.push(estado);
     }
 
-    if (estado_envio === "E" || estado_envio === "A" || estado_envio === "P" || estado_envio === "C") {
+    if (
+      estado_envio === "E" ||
+      estado_envio === "A" ||
+      estado_envio === "P" ||
+      estado_envio === "C"
+    ) {
       query += ` AND tr.estado = ?`;
       params.push(estado_envio);
     }
@@ -448,7 +453,7 @@ const subirMercaderia = async (req: Request, res: Response) => {
       mensaje: "No se encontró el reparto con el ID proporcionado",
     });
   }
-  
+
   if (reparto[0][0]?.estado == "C") {
     return res.json({
       isSuccess: false,
@@ -492,6 +497,67 @@ const subirMercaderia = async (req: Request, res: Response) => {
   }
 };
 
+const cancelarReparto = async (req: Request, res: Response) => {
+  try {
+    const idReparto = req.query.id;
+    const { id } = req.body.user;
+
+    const reparto: any = await pool.query(
+      `SELECT * FROM ${tbReparto} WHERE id = ?`,
+      [idReparto]
+    );
+
+    if (!reparto) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se encontró el reparto con el ID proporcionado",
+      });
+    }
+
+    if (reparto[0][0]?.estado != "C") {
+      return res.json({
+        isSuccess: false,
+        mensaje: "El reparto no esta en curso",
+      });
+    }
+
+    const query = `UPDATE ${tbReparto} SET estado = 'P' WHERE id = ?`;
+    const [result]: any[] = await pool.query(query, [idReparto]);
+    if (result.affectedRows !== 1) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se encontró el reparto con el ID proporcionado",
+      });
+    }
+
+    const movimientoQuery = `INSERT INTO ${tbHistorialReparto} (id_reparto, id_usuario, id_tipo_operacion) VALUES (?,?,?)`;
+    const [movimientoResult]: any[] = await pool.query(movimientoQuery, [
+      idReparto,
+      id,
+      6,
+    ]);
+
+    if (movimientoResult.affectedRows !== 1) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se pudo insertar el movimiento",
+      });
+    }
+
+    return res.json({
+      isSuccess: true,
+      mensaje: "Reparto cancelado con éxito",
+    });
+
+  } catch (err) {
+    res.json({
+      isSuccess: false,
+      mensaje: err || "Error desconocido",
+    });
+  }
+
+};
+
 export default {
   getAllRepartos,
   getReparto,
@@ -499,4 +565,5 @@ export default {
   darConformidad,
   setActivoReparto,
   subirMercaderia,
+  cancelarReparto,
 };

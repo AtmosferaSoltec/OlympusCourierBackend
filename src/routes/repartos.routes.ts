@@ -10,5 +10,6 @@ router.get('/:id', checkAuth, controller.getReparto);
 router.post('/', checkAuth, controller.insertReparto);
 router.patch('/:id_reparto', checkAuth, controller.setActivoReparto);
 router.post('/darConformidad', checkAuth, controller.darConformidad)
+router.post('/cancelarReparto', checkAuth, controller.cancelarReparto)
 
 export { router };
