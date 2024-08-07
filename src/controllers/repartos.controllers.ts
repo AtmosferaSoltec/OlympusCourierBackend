@@ -47,7 +47,7 @@ const getAllRepartos = async (req: Request, res: Response) => {
       params.push(estado);
     }
 
-    if (estado_envio === "E" || estado_envio === "A" || estado_envio === "P") {
+    if (estado_envio === "E" || estado_envio === "A" || estado_envio === "P" || estado_envio === "C") {
       query += ` AND tr.estado = ?`;
       params.push(estado_envio);
     }
