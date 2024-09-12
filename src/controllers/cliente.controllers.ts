@@ -217,18 +217,6 @@ const insertCliente = async (req: Request, res: Response) => {
       });
     }
 
-    //Verificar si telefono ya existe
-    const [verificarTelefono]: any[] = await pool.query(
-      `SELECT COUNT(*) AS count FROM ${tbCliente} WHERE telefono = ?`,
-      [telefono]
-    );
-    if (verificarTelefono[0].count > 0) {
-      return res.json({
-        isSuccess: false,
-        mensaje: `El telefono ${telefono} ya existe`,
-      });
-    }
-
     //Verificar si existe el distrito
     const [verificarDistrito]: any[] = await pool.query(
       `SELECT COUNT(*) AS count FROM ${tbDistrito} WHERE id = ?`,

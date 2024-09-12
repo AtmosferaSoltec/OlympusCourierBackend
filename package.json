@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "nodemon src/app.ts",
-    "start": "node dist/app.js",
+    "start": "pm2 start dist/app.js --name Olympus-7878",
     "build": "tsc"
   },
   "keywords": [],
