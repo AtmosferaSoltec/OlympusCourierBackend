@@ -55,7 +55,7 @@ const listarTodos = async (req: Request, res: Response) => {
         query += ` ORDER BY tc.fecha_creacion DESC`;
 
         //Maximo 50 repartos
-        query += ` LIMIT 50`;
+        //query += ` LIMIT 50`;
 
         const [comprobantes]: any[] = await pool.query(query, params);
 

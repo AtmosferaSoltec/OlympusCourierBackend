@@ -3,7 +3,6 @@ import {
   getComprobanteById,
   getItemsRepartoByRepartoId,
   getMovimientosRepartoByRepartoId,
-  getUsuarioById,
 } from "../func/funciones";
 import { Request, Response } from "express";
 import { pool } from "../db";
@@ -165,7 +164,7 @@ const getReparto = async (req: Request, res: Response) => {
 const insertReparto = async (req: Request, res: Response) => {
   try {
     const { id_ruc, id } = req.body.user;
-    const { anotacion, id_cliente, items } = req.body;
+    const { id_cliente, items } = req.body;
     let { id_vehiculo } = req.body;
 
     //Verificar si todos los campos fueron proporcionados
@@ -225,11 +224,10 @@ const insertReparto = async (req: Request, res: Response) => {
     const nuevo_num_reparto = empresasRows[0].num_reparto + 1;
 
     // Insertar el reparto
-    const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, anotacion, id_vehiculo, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?,?)`;
+    const repartoQuery = `INSERT INTO ${tbReparto} (id_ruc, num_reparto, id_vehiculo, id_cliente, id_usuario, total) VALUES (?,?,?,?,?,?)`;
     const [repartoResult]: any[] = await pool.query(repartoQuery, [
       id_ruc,
       nuevo_num_reparto,
-      anotacion,
       id_vehiculo,
       id_cliente,
       id,
@@ -295,9 +293,154 @@ const insertReparto = async (req: Request, res: Response) => {
       mensaje: "Insertado correctamente",
     });
   } catch (err: any) {
+    console.log(err);
+    
     return res.json({
       isSuccess: false,
       mensaje: err.message,
+    });
+  }
+};
+
+const updateReparto = async (req: Request, res: Response) => {
+  try {
+    const id_reparto = req.params.id;
+    const { id } = req.body.user;
+    let { id_cliente, items, id_vehiculo} = req.body;
+
+    if (id_vehiculo === "T") {
+      id_vehiculo = null;
+    }
+
+    // Verificar si se proporcionó el id_reparto
+    if (id_reparto === undefined) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se proporcionó el ID del reparto",
+      });
+    }
+
+    // Verificar si todos los campos fueron proporcionados
+    if (!id_cliente || !id_vehiculo || !items) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "Faltan campos requeridos, por favor verifique.",
+      });
+    }
+
+    // Verificar si los items son una lista de objetos
+    if (
+      !Array.isArray(items) ||
+      items.some((item: any) => typeof item !== "object")
+    ) {
+      return res.json({
+        isSuccess: false,
+        mensaje: 'El campo "items" debe ser una lista de objetos.',
+      });
+    }
+
+    // Verificar si la lista no esta vacía
+    if (items.length === 0) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se puede ingresar sin items",
+      });
+    }
+
+    let total = 0;
+    items.forEach((item: any) => {
+      if (item.precio) {
+        total += item.precio;
+      }
+    });
+
+    // Verificar si el cliente existe
+    const [clienteRows]: any[] = await pool.query(
+      `SELECT COUNT(*) AS count FROM ${tbCliente} WHERE id = ?`,
+      [id_cliente]
+    );
+    if (clienteRows[0].count === 0) {
+      return res.json({
+        isSuccess: false,
+        mensaje: `El cliente con ID: ${id_cliente} no existe`,
+      });
+    }
+
+    // Actualizar el reparto
+    const repartoQuery = `UPDATE ${tbReparto} SET id_vehiculo = ?, id_cliente = ?, total = ? WHERE id = ?`;
+    const [repartoResult]: any[] = await pool.query(repartoQuery, [
+      id_vehiculo,
+      id_cliente,
+      total,
+      id_reparto,
+    ]);
+
+    if (repartoResult.affectedRows !== 1) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se pudo actualizar",
+      });
+    }
+
+    // Insertar el movimiento
+    const movimientoQuery = `INSERT INTO ${tbHistorialReparto} (id_reparto, id_usuario, id_tipo_operacion) VALUES (?,?,?)`;
+    const [movimientoResult]: any[] = await pool.query(movimientoQuery, [
+      id_reparto,
+      id,
+      7,
+    ]);
+
+    if (movimientoResult.affectedRows !== 1) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se pudo insertar el movimiento",
+      });
+    }
+
+    // Eliminar los items actuales
+    const deleteItemsQuery = `DELETE FROM ${tbItemReparto} WHERE id_reparto = ?`;
+    const [deleteItemsResult]: any[] = await pool.query(deleteItemsQuery, [
+      id_reparto,
+    ]);
+
+    if (deleteItemsResult.affectedRows === 0) {
+      return res.json({
+        isSuccess: false,
+        mensaje: "No se pudo eliminar los items",
+      });
+    }
+
+    // Insertar los nuevos items
+    for (const item of items) {
+      const { num_guia, precio, adicional, clave, detalle } = item;
+
+      const itemQuery = `INSERT INTO ${tbItemReparto} (id_reparto, num_guia, precio, adicional, clave, detalle) VALUES (?,?,?,?,?,?)`;
+      const [itemResult]: any[] = await pool.query(itemQuery, [
+        id_reparto,
+        num_guia,
+        precio,
+        adicional,
+        clave,
+        detalle,
+      ]);
+
+      if (itemResult.affectedRows === 0) {
+        return res.json({
+          isSuccess: false,
+          mensaje: "No se pudo insertar",
+        });
+      }
+    }
+
+    return res.json({
+      isSuccess: true,
+      mensaje: "Actualizado correctamente",
+    });
+
+  } catch (error) {
+    return res.json({
+      isSuccess: false,
+      mensaje: "No se puede actualizar el reparto",
     });
   }
 };
@@ -548,20 +691,19 @@ const cancelarReparto = async (req: Request, res: Response) => {
       isSuccess: true,
       mensaje: "Reparto cancelado con éxito",
     });
-
   } catch (err) {
     res.json({
       isSuccess: false,
       mensaje: err || "Error desconocido",
     });
   }
-
 };
 
 export default {
   getAllRepartos,
   getReparto,
   insertReparto,
+  updateReparto,
   darConformidad,
   setActivoReparto,
   subirMercaderia,
