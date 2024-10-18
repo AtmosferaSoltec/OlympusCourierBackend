@@ -29,6 +29,7 @@ const login = async (req: Request, res: Response) => {
                 isSuccess: true,
                 mensaje: 'Inicio de sesión exitoso',
                 data: {
+                    id: payload.id, 
                     token
                 }
             });
