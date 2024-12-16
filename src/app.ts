@@ -27,7 +27,7 @@ cron.schedule("0 0 * * *", async () => {
 
 if (process.env.LOCAL_MODE === "true") {
   app.listen(puerto, () => {
-    console.log(`Servidor HTTPS en el puerto ${puerto}`);
+    console.log(`Servidor HTTP en el puerto ${puerto}`);
   });
 } else {
   const dir = "atmosfera-soltec.com";
