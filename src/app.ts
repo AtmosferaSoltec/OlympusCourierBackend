@@ -30,10 +30,13 @@ if (process.env.LOCAL_MODE === "true") {
     console.log(`Servidor HTTP en el puerto ${puerto}`);
   });
 } else {
-  const dir = "atmosfera-soltec.com";
+  const certificate =
+    "/etc/letsencrypt/live/atmosfera-soltec.online/fullchain.pem";
+  const privateKey =
+    "/etc/letsencrypt/live/atmosfera-soltec.online/privkey.pem";
   const options = {
-    key: fs.readFileSync(`/etc/letsencrypt/live/${dir}/privkey.pem`),
-    cert: fs.readFileSync(`/etc/letsencrypt/live/${dir}/fullchain.pem`),
+    key: fs.readFileSync(privateKey),
+    cert: fs.readFileSync(certificate),
   };
 
   const server = https.createServer(options, app);
